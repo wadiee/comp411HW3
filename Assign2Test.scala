@@ -1,4 +1,5 @@
 import java.io.StringReader
+import jdk.nashorn.internal.runtime.regexp.joni.exception.SyntaxException
 import junit.framework.TestCase
 import junit.framework.Assert._
 
@@ -630,7 +631,7 @@ class Assign2Test extends TestCase{
       allCheck(output, input);
       fail("Did not throw for free variable");
     }catch{
-      case e: EvalException => print(e.getMessage + "\n")
+      case e: SyntaxException => print(e.getMessage + "\n")
     }
   }
 
@@ -652,7 +653,7 @@ class Assign2Test extends TestCase{
       allCheck(output, input)
       fail("Did not throw for repeated variables");
     } catch{
-      case e: EvalException => print(e.getMessage + "\n")
+      case e: SyntaxException => print(e.getMessage + "\n")
     }
   } //end of func
 
@@ -685,7 +686,17 @@ class Assign2Test extends TestCase{
       allCheck(output, input)
       fail("Did not throw for repeated variables");
     } catch{
-      case e: EvalException => print(e.getMessage + "\n")
+      case e: SyntaxException => print(e.getMessage + "\n")
+    }
+  } //end of func
+
+  def testmapApp3() {
+    try {
+      var output = "3";
+      var input = "(map x, y to x + y)(1,x+1)";
+      allCheck(output, input)
+    } catch{
+      case e: Throwable => fail("throw" + e.printStackTrace());
     }
   } //end of func
 

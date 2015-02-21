@@ -1,3 +1,5 @@
+import jdk.nashorn.internal.runtime.regexp.joni.exception.SyntaxException
+
 /** file Interpreter.scala **/
 
 abstract class Tuple {
@@ -40,9 +42,14 @@ class Interpreter(reader: java.io.Reader) {
     },
     (en, e, vars, args, helper, untilNotVariable) => {
       var newMap = en
-//      var newMap2 = e
+      var newMap2 = e
       if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new ValueTuple(helper(p._2, newMap2), untilNotVariable(p._2, newMap2)))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
       newMap
     }
   )
@@ -58,8 +65,14 @@ class Interpreter(reader: java.io.Reader) {
     },
     (en, e, vars, args, helper, untilNotVariable) => {
       var newMap = en
+      var newMap2 = e
       if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).map(pair => (pair._1.sym, new NameTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new NameTuple(helper(p._2, newMap2), untilNotVariable(p._2, newMap2)))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new NameTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
       newMap
     }
   )
@@ -75,8 +88,14 @@ class Interpreter(reader: java.io.Reader) {
     },
     (en, e, vars, args, helper, untilNotVariable) => {
       var newMap = en
+      var newMap2 = e
       if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new NeedTuple(helper, untilNotVariable, newMap2, p._2))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     }
   )
@@ -156,7 +175,7 @@ class Interpreter(reader: java.io.Reader) {
       }
       case Let(defs: Array[Def], body: AST) => {
         var repeatedMap = defs.map(d => d.lhs).groupBy(l => l).map(t => (t._1, t._2.length)).filter(pair => pair._2 > 1)
-        if (repeatedMap.size > 0) throw new EvalException(repeatedMap.keys + " are repeatedly defined variables")
+        if (repeatedMap.size > 0) throw new SyntaxException(repeatedMap.keys + " are repeatedly defined variables")
         else helper(body, f1(e, defs, helper, untilNotVariable))
       }
 
@@ -165,7 +184,7 @@ class Interpreter(reader: java.io.Reader) {
       case b: BoolConstant => b
       case i: IntConstant => i
 
-      case Variable(sym: Symbol) => if (e.contains(sym)) e(sym).getJamVal else throw new EvalException(sym + " is a free variable!")
+      case Variable(sym: Symbol) => if (e.contains(sym)) e(sym).getJamVal else throw new SyntaxException(sym + " is a free variable!")
 
 
       case UnOpApp(rator: UnOp, arg: AST) => rator match {
@@ -179,7 +198,7 @@ class Interpreter(reader: java.io.Reader) {
       }
       case maplit: MapLiteral => {
         var repeatedMap = maplit.vars.groupBy(l => l).map(t => (t._1, t._2.length)).filter(pair => pair._2 > 1)
-        if (repeatedMap.size > 0) throw new EvalException(repeatedMap.keys + " are repeatedly defined variables")
+        if (repeatedMap.size > 0) throw new SyntaxException(repeatedMap.keys + " are repeatedly defined variables")
         else JamClosure[Tp](maplit, e)
       }
 
@@ -262,7 +281,7 @@ class Interpreter(reader: java.io.Reader) {
           if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
 
           var repeatedMap = vars.groupBy(l => l).map(p => (p._1, p._2.length)).filter(p => p._2 > 1)
-          if(repeatedMap.size > 1) throw new EvalException(repeatedMap + " are repeatedly defined variables.")
+          if(repeatedMap.size > 1) throw new SyntaxException(repeatedMap + " are repeatedly defined variables.")
           else helper(body, f2(en, e, vars, args, helper, untilNotVariable))
         }
         case _=> throw new EvalException("Did not match. Got a class: " + rator.getClass)
