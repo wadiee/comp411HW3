@@ -1,4 +1,4 @@
-import jdk.nashorn.internal.runtime.regexp.joni.exception.SyntaxException
+
 
 /** file Interpreter.scala **/
 
@@ -25,6 +25,8 @@ class NeedTuple(helper: (AST, Map[Symbol, NeedTuple]) => JamVal, notUntil: (AST,
 }
 
 class EvalException(msg: String) extends RuntimeException(msg)
+class SyntaxException(msg: String) extends RuntimeException(msg)
+
 class Interpreter(reader: java.io.Reader) {
   def this(fileName: String) = this(new java.io.FileReader(fileName))
 
@@ -158,20 +160,26 @@ class Interpreter(reader: java.io.Reader) {
         case OpGreaterThanEquals => binIntCmpOp(e, arg1, arg2, _ >= _, "BinOpGreaterthanEq not with int")
         case OpAnd => helper(arg1, e) match {
           case False => False
-          case True => helper(arg2, e)
-          case _ => throw new EvalException("Never should be here!")
+          case True => helper(arg2, e) match {
+            case bool: BoolConstant => bool
+            case _ => throw new EvalException("And operation arg2 is not boolean")
+          }
+          case _ => throw new EvalException("And operation arg1 is not boolean")
         }
         case OpOr => helper(arg1, e) match {
           case True => True
-          case False => helper(arg2, e)
-          case _ => throw new EvalException("Never should be here!")
+          case False => helper(arg2, e) match {
+            case bool: BoolConstant => bool
+            case _ => throw new EvalException("Or operation arg2 is not boolean")
+          }
+          case _ => throw new EvalException("Or operation arg1 is not boolean")
         }
       }
       // The followings are below Term
       case If(test: AST, conseq: AST, alt: AST) => helper(test, e) match {
         case True => helper(conseq, e)
         case False => helper(alt, e)
-        case _ => throw new EvalException("Never should be here!")
+        case _ => throw new EvalException("If condition is not boolean")
       }
       case Let(defs: Array[Def], body: AST) => {
         var repeatedMap = defs.map(d => d.lhs).groupBy(l => l).map(t => (t._1, t._2.length)).filter(pair => pair._2 > 1)
@@ -185,10 +193,7 @@ class Interpreter(reader: java.io.Reader) {
       case i: IntConstant => i
 
       case Variable(sym: Symbol) => {
-        if (e.contains(sym)) {
-          var hey = e(sym).getJamVal
-          hey
-        }
+        if (e.contains(sym)) e(sym).getJamVal
         else throw new SyntaxException(sym + " is a free variable!")
       }
 
@@ -198,7 +203,7 @@ class Interpreter(reader: java.io.Reader) {
         case OpTilde => helper(arg, e) match {
           case True => False
           case False => True
-          case _ => throw new EvalException("Never should be here!")
+          case _ => throw new EvalException("Tilde without Boolean")
         }
       }
       case maplit: MapLiteral => {

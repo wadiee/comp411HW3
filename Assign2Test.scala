@@ -611,18 +611,18 @@ class Assign2Test extends TestCase{
   } //end of func
 
 
+// Added testcases for HW 3
 
-
-//  def testPiazza1() {
-//    try {
-//      var output = "6";
-//      var input = "let b:=3; a:=b; in (a+b)";
-//      allCheck(output, input)
-//      fail("Did not throw for free variable");
-//    } catch{
-//      case e: Throwable => fail("piazza1 throw");
-//    }
-//  }
+  def testPiazza1() {
+    try {
+      var output = "6";
+      var input = "let a:=b; b:=3; in (a+b)";
+      allCheck(output, input)
+      fail("Did not throw for free variable");
+    } catch{
+      case e: SyntaxException =>  print(e.getMessage + "\n")
+    }
+  }
 
   def testBinopFV(){
     try {
@@ -697,6 +697,48 @@ class Assign2Test extends TestCase{
       allCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
+    }
+  } //end of func
+
+  def testAnd(){
+    try {
+      var output = "true";
+      var input = "(3 = 3) & (4 = 4)";
+      allCheck(output, input)
+    } catch{
+      case e: Throwable => fail("throw" + e.printStackTrace());
+    }
+  }
+
+  def testAnd2() {
+    try {
+      var output = "";
+      var input = "(3 = 3) & 4";
+      allCheck(output, input)
+      fail("Did not throw for binary And without boolean");
+    } catch{
+      case e: EvalException => print(e.getMessage + "\n")
+    }
+  } //end of func
+
+  def testOr(){
+    try {
+      var output = "true";
+      var input = "(3 = 3) | x";
+      allCheck(output, input)
+    } catch{
+      case e: Throwable => fail("throw" + e.printStackTrace());
+    }
+  }
+
+  def testOr2() {
+    try {
+      var output = "";
+      var input = "(3 = 2) | 4";
+      allCheck(output, input)
+      fail("Did not throw for binary Or without boolean");
+    } catch{
+      case e: EvalException => print(e.getMessage + "\n")
     }
   } //end of func
 
