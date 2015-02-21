@@ -630,7 +630,7 @@ class Assign2Test extends TestCase{
       allCheck(output, input);
       fail("Did not throw for free variable");
     }catch{
-      case e: EvalException => print(e.getMessage)
+      case e: EvalException => print(e.getMessage + "\n")
     }
   }
 
@@ -638,10 +638,10 @@ class Assign2Test extends TestCase{
     try {
       var output = "JamClosure(map x,y to (x + y),Map())";
       var input = "(map x, y to x + y)";
+      allCheck(output, input)
 
-      needCheck(output, input)
     } catch{
-      case e: Throwable => fail("Binary throw" + e.printStackTrace());
+      case e: Throwable => fail("throw" + e.printStackTrace());
     }
   } //end of func
 
@@ -649,12 +649,44 @@ class Assign2Test extends TestCase{
     try {
       var output = "JamClosure(map x,x to (x + x),Map())";
       var input = "(map x, x to x + x)";
-
-      needCheck(output, input)
+      allCheck(output, input)
+      fail("Did not throw for repeated variables");
     } catch{
-      case e: Throwable => fail("Binary throw" + e.printStackTrace());
+      case e: EvalException => print(e.getMessage + "\n")
     }
   } //end of func
 
+  def testlet1() {
+    try {
+      var output = "2";
+      var input = "let x:=1; y := x +1; in y";
+      allCheck(output, input)
+
+    } catch{
+      case e: Throwable => fail("throw" + e.printStackTrace());
+    }
+  } //end of func
+
+
+  def testmapApp() {
+    try {
+      var output = "3";
+      var input = "(map x, y to x + y)(1,2)";
+      allCheck(output, input)
+    } catch{
+      case e: Throwable => fail("throw" + e.printStackTrace());
+    }
+  } //end of func
+
+  def testmapApp2() {
+    try {
+      var output = "";
+      var input = "(map x, x to x + x)(1,3)";
+      allCheck(output, input)
+      fail("Did not throw for repeated variables");
+    } catch{
+      case e: EvalException => print(e.getMessage + "\n")
+    }
+  } //end of func
 
 }
