@@ -8,20 +8,20 @@ abstract class Tuple {
 }
 
 class ValueTuple(jamVal: JamVal, ast: AST) extends Tuple{
-  override def getJamVal = jamVal
-  override def getAST = ast
+  override def getJamVal: JamVal = jamVal
+  override def getAST: AST = ast
 }
 
-class NameTuple(jamVal: => JamVal, ast: => AST) extends Tuple{
-  override def getJamVal = jamVal
-  override def getAST = ast
+class NameTuple(helper: (AST, Map[Symbol, NameTuple]) => JamVal, notUntil: (AST, Map[Symbol, NameTuple]) => AST, env: Map[Symbol, NameTuple], rawVar: AST) extends Tuple{
+  override def getJamVal: JamVal = helper(rawVar, env)
+  override def getAST: AST = notUntil(rawVar, env)
 }
 
 class NeedTuple(helper: (AST, Map[Symbol, NeedTuple]) => JamVal, notUntil: (AST, Map[Symbol, NeedTuple]) => AST, env: Map[Symbol, NeedTuple], rawVar: AST) extends Tuple{
   lazy val jamVal = helper(rawVar, env)
   lazy val lazyAst = notUntil(rawVar, env)
-  override def getJamVal = jamVal
-  override def getAST = lazyAst
+  override def getJamVal: JamVal = jamVal
+  override def getAST: AST = lazyAst
 }
 
 class EvalException(msg: String) extends RuntimeException(msg)
@@ -58,7 +58,7 @@ class Interpreter(reader: java.io.Reader) {
     (e, defs, helper, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
-        var pair = (d.lhs.sym, new NameTuple(helper(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        var pair = (d.lhs.sym, new NameTuple(helper, untilNotVariable, newMap, d.rhs))
         newMap += pair
       })
       newMap
@@ -68,11 +68,11 @@ class Interpreter(reader: java.io.Reader) {
       var newMap2 = e
       if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
       vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NameTuple(helper(p._2, newMap2), untilNotVariable(p._2, newMap2)))
+        var pair = (p._1.sym, new NameTuple(helper, untilNotVariable, newMap2, p._2))
         newMap += pair
         newMap2 += pair
       })
-      //vars.zip(args).map(pair => (pair._1.sym, new NameTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
+      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     }
   )
@@ -184,8 +184,13 @@ class Interpreter(reader: java.io.Reader) {
       case b: BoolConstant => b
       case i: IntConstant => i
 
-      case Variable(sym: Symbol) => if (e.contains(sym)) e(sym).getJamVal else throw new SyntaxException(sym + " is a free variable!")
-
+      case Variable(sym: Symbol) => {
+        if (e.contains(sym)) {
+          var hey = e(sym).getJamVal
+          hey
+        }
+        else throw new SyntaxException(sym + " is a free variable!")
+      }
 
       case UnOpApp(rator: UnOp, arg: AST) => rator match {
         case UnOpPlus =>  UnIntOp(e, arg, + _, "unary plus without int")
