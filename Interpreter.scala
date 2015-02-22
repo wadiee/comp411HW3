@@ -30,6 +30,9 @@ class Interpreter(reader: java.io.Reader) {
 
   val ast: AST = new Parser(reader).parse()
 
+  def makeCons[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+    new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+
   def callByValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
     (e, defs, helper, untilNotVariable) => {
       var newMap = e
@@ -51,7 +54,8 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
       newMap
     },
-    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+//    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+    makeCons[ValueTuple]
 
   )
 
@@ -76,7 +80,7 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+    makeCons[NameTuple]
   )
 
   def callByNeed: JamVal = callGeneral[NeedTuple, JamListNEValue](
@@ -100,7 +104,7 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+    makeCons[NeedTuple]
   )
 
   private def callGeneral[Tp <: Tuple, Cons <: JamList](
