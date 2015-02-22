@@ -53,7 +53,7 @@ case class JamListNEValue(first: JamVal, rest: JamList) extends JamList {
   override def toString = jamListToList(this).mkString("(", " ", ")")
 }
 
-case class JamListNEName[Tp](first: JamVal, helper: (AST, MutableMap[Symbol, Tp]) => JamVal, arg1: AST, e: MutableMap[Symbol, Tp]) extends JamList {
+case class JamListNEName[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]) extends JamList {
   override def getFirst = first
   override def getRest = helper(arg1, e).asInstanceOf[JamList]
   private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
@@ -63,7 +63,7 @@ case class JamListNEName[Tp](first: JamVal, helper: (AST, MutableMap[Symbol, Tp]
   override def toString = jamListToList(this).mkString("(", " ", ")")
 }
 
-case class JamListNENeed[Tp](first: JamVal, helper: (AST, MutableMap[Symbol, Tp]) => JamVal, arg1: AST, e: MutableMap[Symbol, Tp]) extends JamList {
+case class JamListNENeed[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]) extends JamList {
   lazy val restlazy = helper(arg1, e).asInstanceOf[JamList]
   override def getFirst = first
   override def getRest = restlazy

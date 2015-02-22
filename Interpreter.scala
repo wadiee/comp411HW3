@@ -30,10 +30,16 @@ class Interpreter(reader: java.io.Reader) {
 
   val ast: AST = new Parser(reader).parse()
 
-  def makeCons[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+  def makeConsValue[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
     new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
 
-  def callByValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
+  def makeConsName[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+    new JamListNEName(first, helper, arg1, e)
+
+  def makeConsNeed[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+    new JamListNENeed(first, helper, arg1, e)
+
+  def valueValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
     (e, defs, helper, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
@@ -55,11 +61,11 @@ class Interpreter(reader: java.io.Reader) {
       newMap
     },
 //    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
-    makeCons[ValueTuple]
+    makeConsValue[ValueTuple]
 
   )
 
-  def callByName: JamVal = callGeneral[NameTuple, JamListNEValue](
+  def nameValue: JamVal = callGeneral[NameTuple, JamListNEValue](
     (e, defs, helper, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
@@ -80,10 +86,10 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    makeCons[NameTuple]
+    makeConsValue[NameTuple]
   )
 
-  def callByNeed: JamVal = callGeneral[NeedTuple, JamListNEValue](
+  def needValue: JamVal = callGeneral[NeedTuple, JamListNEValue](
     (e, defs, helper, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
@@ -104,7 +110,155 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    makeCons[NeedTuple]
+    makeConsValue[NeedTuple]
+  )
+
+  def valueName: JamVal = callGeneral[ValueTuple, JamListNEName[ValueTuple]](
+    (e, defs, helper, untilNotVariable) => {
+      var newMap = e
+      defs.foreach(d => {
+        var pair = (d.lhs.sym, new ValueTuple(helper(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        newMap += pair
+      })
+      newMap
+    },
+    (en, e, vars, args, helper, untilNotVariable) => {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new ValueTuple(helper(p._2, newMap2), untilNotVariable(p._2, newMap2)))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
+      newMap
+    },
+    //    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+    makeConsName[ValueTuple]
+
+  )
+
+  def nameName: JamVal = callGeneral[NameTuple, JamListNEName[NameTuple]](
+    (e, defs, helper, untilNotVariable) => {
+      var newMap = e
+      defs.foreach(d => {
+        var pair = (d.lhs.sym, new NameTuple(helper, untilNotVariable, newMap, d.rhs))
+        newMap += pair
+      })
+      newMap
+    },
+    (en, e, vars, args, helper, untilNotVariable) => {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new NameTuple(helper, untilNotVariable, newMap2, p._2))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
+      newMap
+    },
+    makeConsName[NameTuple]
+  )
+
+  def needName: JamVal = callGeneral[NeedTuple, JamListNEName[NeedTuple]](
+    (e, defs, helper, untilNotVariable) => {
+      var newMap = e
+      defs.foreach(d => {
+        var pair = (d.lhs.sym, new NeedTuple(helper, untilNotVariable, newMap, d.rhs))
+        newMap += pair
+      })
+      newMap
+    },
+    (en, e, vars, args, helper, untilNotVariable) => {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new NeedTuple(helper, untilNotVariable, newMap2, p._2))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
+      newMap
+    },
+    makeConsName[NeedTuple]
+  )
+
+  def valueNeed: JamVal = callGeneral[ValueTuple, JamListNENeed[ValueTuple]](
+    (e, defs, helper, untilNotVariable) => {
+      var newMap = e
+      defs.foreach(d => {
+        var pair = (d.lhs.sym, new ValueTuple(helper(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        newMap += pair
+      })
+      newMap
+    },
+    (en, e, vars, args, helper, untilNotVariable) => {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new ValueTuple(helper(p._2, newMap2), untilNotVariable(p._2, newMap2)))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
+      newMap
+    },
+    //    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+    makeConsNeed[ValueTuple]
+
+  )
+
+  def nameNeed: JamVal = callGeneral[NameTuple, JamListNENeed[NameTuple]](
+    (e, defs, helper, untilNotVariable) => {
+      var newMap = e
+      defs.foreach(d => {
+        var pair = (d.lhs.sym, new NameTuple(helper, untilNotVariable, newMap, d.rhs))
+        newMap += pair
+      })
+      newMap
+    },
+    (en, e, vars, args, helper, untilNotVariable) => {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new NameTuple(helper, untilNotVariable, newMap2, p._2))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
+      newMap
+    },
+    makeConsNeed[NameTuple]
+  )
+
+  def needNeed: JamVal = callGeneral[NeedTuple, JamListNENeed[NeedTuple]](
+    (e, defs, helper, untilNotVariable) => {
+      var newMap = e
+      defs.foreach(d => {
+        var pair = (d.lhs.sym, new NeedTuple(helper, untilNotVariable, newMap, d.rhs))
+        newMap += pair
+      })
+      newMap
+    },
+    (en, e, vars, args, helper, untilNotVariable) => {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new NeedTuple(helper, untilNotVariable, newMap2, p._2))
+        newMap += pair
+        newMap2 += pair
+      })
+      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
+      newMap
+    },
+    makeConsNeed[NeedTuple]
   )
 
   private def callGeneral[Tp <: Tuple, Cons <: JamList](
