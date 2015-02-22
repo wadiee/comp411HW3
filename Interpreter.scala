@@ -1,5 +1,3 @@
-
-
 /** file Interpreter.scala **/
 
 abstract class Tuple {
@@ -32,14 +30,13 @@ class Interpreter(reader: java.io.Reader) {
 
   val ast: AST = new Parser(reader).parse()
 
-  def callByValue: JamVal = callGeneral[ValueTuple](
+  def callByValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
     (e, defs, helper, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
         var pair = (d.lhs.sym, new ValueTuple(helper(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
         newMap += pair
       })
-      //defs.map(d => (d.lhs.sym, new ValueTuple(helper(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))).foreach(pair => newMap += pair)
       newMap
     },
     (en, e, vars, args, helper, untilNotVariable) => {
@@ -53,10 +50,12 @@ class Interpreter(reader: java.io.Reader) {
       })
       //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
       newMap
-    }
+    },
+    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+
   )
 
-  def callByName: JamVal = callGeneral[NameTuple](
+  def callByName: JamVal = callGeneral[NameTuple, JamListNEValue](
     (e, defs, helper, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
@@ -76,10 +75,11 @@ class Interpreter(reader: java.io.Reader) {
       })
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
-    }
+    },
+    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
   )
 
-  def callByNeed: JamVal = callGeneral[NeedTuple](
+  def callByNeed: JamVal = callGeneral[NeedTuple, JamListNEValue](
     (e, defs, helper, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
@@ -99,13 +99,15 @@ class Interpreter(reader: java.io.Reader) {
       })
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
-    }
+    },
+    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
   )
 
-  private def callGeneral[Tp <: Tuple](
-                                f1: (Map[Symbol, Tp], Array[Def], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
-                                f2: (Map[Symbol, Tp], Map[Symbol, Tp], Array[Variable], Array[AST], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp]
-                                ): JamVal = {
+  private def callGeneral[Tp <: Tuple, Cons <: JamList](
+                                        letBinding: (Map[Symbol, Tp], Array[Def], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
+                                        appMapBinding: (Map[Symbol, Tp], Map[Symbol, Tp], Array[Variable], Array[AST], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
+                                                       makeCons: (JamVal, (AST, Map[Symbol, Tp]) => JamVal, AST, Map[Symbol, Tp]) => JamVal
+                                        ): JamVal = {
     def binIntOp(e: Map[Symbol, Tp], arg1: AST, arg2: AST, op: (Int, Int) => Int, exceptionContent: String) = (helper(arg1, e), helper(arg2, e)) match {
       case (IntConstant(value1: Int), IntConstant(value2: Int)) => IntConstant(op(value1, value2))
       case _ => throw new EvalException(exceptionContent)
@@ -184,7 +186,7 @@ class Interpreter(reader: java.io.Reader) {
       case Let(defs: Array[Def], body: AST) => {
         var repeatedMap = defs.map(d => d.lhs).groupBy(l => l).map(t => (t._1, t._2.length)).filter(pair => pair._2 > 1)
         if (repeatedMap.size > 0) throw new SyntaxException(repeatedMap.keys + " are repeatedly defined variables")
-        else helper(body, f1(e, defs, helper, untilNotVariable))
+        else helper(body, letBinding(e, defs, helper, untilNotVariable))
       }
 
       // Constant
@@ -262,13 +264,15 @@ class Interpreter(reader: java.io.Reader) {
 
         case ConsPrim =>
           if (args.length != 2) throw new EvalException("Should have two arguments")
-          new JamListNE(helper(args(0), e), helper(args(1), e).asInstanceOf[JamList])
+//          new JamListNEValue(helper(args(0), e), helper(args(1), e).asInstanceOf[JamList])
+          makeCons(helper(args(0), e), helper, args(1), e)
+
 
         case FirstPrim =>
           if (args.length != 1) throw new EvalException("Should have one arguments")
           args(0) match {
             case va: Variable => e(va.sym).getJamVal match {
-              case jl: JamListNE => jl.first
+              case jl: Cons => jl.getFirst
               case _ => throw new EvalException("Calling FirstPrim on a non-list variable")
             }
             case App(ConsPrim, l) => helper(l(0), e)
@@ -279,7 +283,7 @@ class Interpreter(reader: java.io.Reader) {
           if (args.length != 1) throw new EvalException("Should have one arguments")
           args(0) match {
             case va: Variable => e(va.sym).getJamVal match {
-              case jl: JamListNE => jl.rest
+              case jl: Cons => jl.getRest
               case _ => throw new EvalException("Calling RestPrim on a non-list variable")
             }
             case App(ConsPrim, l) => helper(l(1), e)
@@ -292,7 +296,7 @@ class Interpreter(reader: java.io.Reader) {
 
           var repeatedMap = vars.groupBy(l => l).map(p => (p._1, p._2.length)).filter(p => p._2 > 1)
           if(repeatedMap.size > 1) throw new SyntaxException(repeatedMap + " are repeatedly defined variables.")
-          else helper(body, f2(en, e, vars, args, helper, untilNotVariable))
+          else helper(body, appMapBinding(en, e, vars, args, helper, untilNotVariable))
         }
         case _=> throw new EvalException("Did not match. Got a class: " + rator.getClass)
       }

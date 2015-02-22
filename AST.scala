@@ -38,12 +38,39 @@ sealed trait JamVal {
 //  def rest = JamList(list.tail)
 //  override def toString = list.toString
 //}
-trait JamList extends JamVal
+trait JamList extends JamVal{
+  def getFirst: JamVal
+  def getRest: JamList
+}
 
-case class JamListNE(first: JamVal, rest: JamList) extends JamList {
+case class JamListNEValue(first: JamVal, rest: JamList) extends JamList {
+  override def getFirst = first
+  override def getRest = rest
   private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
     case EmptyConstant => Nil
-    case JamListNE(first, rest) => first :: jamListToList(rest)
+    case JamListNEValue(first, rest) => first :: jamListToList(rest)
+  }
+  override def toString = jamListToList(this).mkString("(", " ", ")")
+}
+
+case class JamListNEName[Tp](first: JamVal, helper: (AST, MutableMap[Symbol, Tp]) => JamVal, arg1: AST, e: MutableMap[Symbol, Tp]) extends JamList {
+  override def getFirst = first
+  override def getRest = helper(arg1, e).asInstanceOf[JamList]
+  private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
+    case EmptyConstant => Nil
+    case JamListNEName(first, helper, arg1, e) => first :: jamListToList(helper(arg1, e).asInstanceOf[JamListNEName[Tp]])
+  }
+  override def toString = jamListToList(this).mkString("(", " ", ")")
+}
+
+case class JamListNENeed[Tp](first: JamVal, helper: (AST, MutableMap[Symbol, Tp]) => JamVal, arg1: AST, e: MutableMap[Symbol, Tp]) extends JamList {
+  lazy val restlazy = helper(arg1, e).asInstanceOf[JamList]
+  override def getFirst = first
+  override def getRest = restlazy
+
+  private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
+    case EmptyConstant => Nil
+    case JamListNENeed(first, _, _, _) => first :: jamListToList(restlazy)
   }
   override def toString = jamListToList(this).mkString("(", " ", ")")
 }
@@ -58,7 +85,7 @@ sealed trait Constant extends Term with Token
 trait JamValVisitor[T] {
   def forIntConstant(ic: IntConstant): T
   def forBoolConstant(bc: BoolConstant): T
-  def forJamList(jl: JamListNE): T
+  def forJamList(jl: JamListNEValue): T
   def forJamFun(jf: JamFun): T
   // def forJamVoid(jv: JamVoid): T  // Supports the addition of recursive let to Jam
 }
@@ -204,6 +231,8 @@ case object RestPrim extends PrimFun(Symbol("rest")) {
 
 /** The token representing Jam empty (list).  NOTE: not a JamVal. */
 case object EmptyConstant extends Constant with JamList {
+  override def getFirst = throw new UnsupportedOperationException("Empty Constant has no get first method")
+  override def getRest = throw new UnsupportedOperationException("Empty Constant has no get rest method")
   override def toString = "null"
 }
 

@@ -668,6 +668,17 @@ class Assign2Test extends TestCase{
     }
   } //end of func
 
+  def testlet2() {
+    try {
+      var output = "2";
+      var input = "let y := x +1; x:=1; in y";
+      nameCheck(output, input)
+      needCheck(output, input)
+
+    } catch{
+      case e: Throwable => fail("throw" + e.printStackTrace());
+    }
+  } //end of func
 
   def testmapApp() {
     try {
@@ -741,5 +752,17 @@ class Assign2Test extends TestCase{
       case e: EvalException => print(e.getMessage + "\n")
     }
   } //end of func
+
+//  def testReclet() {
+//    try {
+//      var output = "true";
+//      var input = "let is_even := map x to if x = 0 then true else is_odd(x-1);\n     is_odd := map x to if x = 0 then false else is_even(x-1);\nin is_even(42)";
+//      allCheck(output, input)
+//    } catch {
+//      case e: Throwable => fail("throw" + e.printStackTrace());
+//    }
+//  }
+
+
 
 }
