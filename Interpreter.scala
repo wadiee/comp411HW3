@@ -30,17 +30,17 @@ class Interpreter(reader: java.io.Reader) {
 
   val ast: AST = new Parser(reader).parse()
 
-  def makeConsValue[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+  private def makeConsValue[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
   evaluate(arg1, e) match {
     case EmptyConstant => new JamListNEValue(first, EmptyConstant)
     case j: JamListNEValue => new JamListNEValue(first, j)
     case _ => throw new EvalException("The rest of cons is not of a valid type")
   }
 
-  def makeConsName[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+  private def makeConsName[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
     new JamListNEName(first, evaluate, arg1, e)
 
-  def makeConsNeed[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+  private def makeConsNeed[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
     new JamListNENeed(first, evaluate, arg1, e)
 
   def valueValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
