@@ -49,28 +49,47 @@ case class JamListNEValue(first: JamVal, rest: JamList) extends JamList {
   private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
     case EmptyConstant => Nil
     case JamListNEValue(first, rest) => first :: jamListToList(rest)
+    case _ => throw new EvalException("Name: the type Jamlist not a JamlistNEValue")
   }
+  var listme = jamListToList(this)
+
   override def toString = jamListToList(this).mkString("(", " ", ")")
 }
 
 case class JamListNEName[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]) extends JamList {
   override def getFirst = first
-  override def getRest = helper(arg1, e).asInstanceOf[JamList]
+  override def getRest = helper(arg1, e) match {
+    case EmptyConstant => EmptyConstant
+    case j: JamListNEName[Tp] => j
+    case _ => throw new EvalException("Name: the type of rest is not a jamlist")
+  }
   private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
     case EmptyConstant => Nil
-    case JamListNEName(first, helper, arg1, e) => first :: jamListToList(helper(arg1, e).asInstanceOf[JamListNEName[Tp]])
+    case JamListNEName(firstt, _, arg11, env: Map[Symbol, Tp]) => helper(arg11, env)  match {
+      case EmptyConstant => firstt :: Nil
+      case j: JamListNEName[Tp] => firstt :: jamListToList(j)
+      case _ => throw new EvalException("Name: the type of rest is not a jamlist")
+    }
   }
   override def toString = jamListToList(this).mkString("(", " ", ")")
 }
 
 case class JamListNENeed[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]) extends JamList {
-  lazy val restlazy = helper(arg1, e).asInstanceOf[JamList]
+  lazy val restlazy : JamList = helper(arg1, e) match{
+    case EmptyConstant => EmptyConstant
+    case j: JamListNENeed[Tp] => j
+    case _ => throw new EvalException("Need: the type of rest is not a jamlist")
+  }
   override def getFirst = first
   override def getRest = restlazy
 
   private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
     case EmptyConstant => Nil
-    case JamListNENeed(first, _, _, _) => first :: jamListToList(restlazy)
+    case JamListNENeed(firstt, _, arg11, env: Map[Symbol, Tp]) => helper(arg11, env) match {
+      case EmptyConstant => firstt :: Nil
+      case j: JamListNEName[Tp] => firstt :: jamListToList(j)
+      case _ => throw new EvalException("Need: the type of rest is not a jamlist")
+    }
   }
   override def toString = jamListToList(this).mkString("(", " ", ")")
 }

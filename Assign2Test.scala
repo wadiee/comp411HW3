@@ -104,32 +104,88 @@ class Assign2Test extends TestCase{
   def valueCheck(answer: String, program: String) = {
     var interp = new Interpreter(new StringReader(program))
     var ge = interp.valueValue.toString()
-    assertEquals(answer, interp.valueValue.toString())
+    assertEquals(answer, ge)
   }
 
   def nameCheck(answer: String, program: String) = {
     var interp = new Interpreter(new StringReader(program))
     var ge = interp.nameValue.toString()
-    assertEquals(answer, interp.nameValue.toString())
+    assertEquals(answer, ge)
   }
 
   def needCheck(answer: String, program: String) = {
     var interp = new Interpreter(new StringReader(program))
     var ge = interp.needValue.toString()
-    assertEquals(answer, interp.needValue.toString())
+    assertEquals(answer, ge)
   }
 
-  def allCheck(answer: String, program: String) {
+  def valueNameCheck(answer: String, program: String) = {
+    var interp = new Interpreter(new StringReader(program))
+    var ge = interp.valueName.toString()
+    assertEquals(answer, ge)
+  }
+
+  def nameNameCheck(answer: String, program: String) = {
+    var interp = new Interpreter(new StringReader(program))
+    var ge = interp.nameName.toString()
+    assertEquals(answer, ge)
+  }
+
+  def needNameCheck(answer: String, program: String) = {
+    var interp = new Interpreter(new StringReader(program))
+    var ge = interp.needName.toString()
+    assertEquals(answer, ge)
+  }
+
+  def valueNeedCheck(answer: String, program: String) = {
+    var interp = new Interpreter(new StringReader(program))
+    var ge = interp.valueNeed.toString()
+    assertEquals(answer, ge)
+  }
+
+  def nameNeedCheck(answer: String, program: String) = {
+    var interp = new Interpreter(new StringReader(program))
+    var ge = interp.nameNeed.toString()
+    assertEquals(answer, ge)
+  }
+
+  def needNeedCheck(answer: String, program: String) = {
+    var interp = new Interpreter(new StringReader(program))
+    var ge = interp.needNeed.toString()
+    assertEquals(answer, ge)
+  }
+  
+  
+
+  def allValueCheck(answer: String, program: String) {
     valueCheck(answer, program);
     nameCheck(answer, program);
     needCheck(answer, program);
+  }
+
+  def allNameCheck(answer: String, program: String) {
+    valueNameCheck(answer, program);
+    nameNameCheck(answer, program);
+    needNameCheck(answer, program);
+  }
+
+  def allNeedCheck(answer: String, program: String) {
+    valueNameCheck(answer, program);
+    nameNameCheck(answer, program);
+    needNameCheck(answer, program);
+  }
+
+  def allCheck(answer: String, program: String){
+    allValueCheck(answer, program)
+    allNameCheck(answer, program)
+    allNeedCheck(answer, program)
   }
 
   def testNumberP() {
     try {
       var output = "number?";
       var input = "number?";
-      allCheck(output, input );
+      allValueCheck(output, input );
 
     } catch{
       case _: Throwable => fail("numberP threw ");
@@ -140,7 +196,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "18";
       var input = "2 * 3 + 12";
-      allCheck(output, input );
+      allValueCheck(output, input );
 
     } catch{
       case _: Throwable => fail("MathOP threw ");
@@ -151,7 +207,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "haha";
       var input = " 1 +"
-      allCheck(output, input);
+      allValueCheck(output, input);
       fail("parseException did not throw ParseException exception");
     }catch{
       case _: Throwable =>
@@ -162,7 +218,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "mojo";
       var input = "1 + number?"
-      allCheck(output, input);
+      allValueCheck(output, input);
       fail("parseException did not throw ParseException exception");
     }catch{
       case _: Throwable =>
@@ -174,10 +230,13 @@ class Assign2Test extends TestCase{
     try {
       var output = "(1 2)";
       var input = "cons(1, cons(2, null))";
-      allCheck(output, input );
+      nameCheck(output, input );
 
     } catch{
-      case _: Throwable => fail("cons threw ");
+      case e: Throwable => {
+        e.printStackTrace()
+        fail("cons threw")
+      }
     }
   } //end of func
 
@@ -186,7 +245,7 @@ class Assign2Test extends TestCase{
       var output = "true";
       var input = "null?(null)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case _: Throwable => fail("null? threw ");
     }
@@ -197,7 +256,7 @@ class Assign2Test extends TestCase{
       var output = "true";
       var input = "cons?(cons(1, null))";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case _: Throwable => fail("cons? threw ");
     }
@@ -208,7 +267,7 @@ class Assign2Test extends TestCase{
       var output = "true";
       var input = "number?(1)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case _: Throwable => fail("number? threw ");
     }
@@ -219,7 +278,7 @@ class Assign2Test extends TestCase{
       var output = "true";
       var input = "function?(number?)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case _: Throwable => fail("function? threw ");
     }
@@ -230,7 +289,7 @@ class Assign2Test extends TestCase{
       var output = "3";
       var input = "arity(map x, y, z to x)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("arity threw " + e.printStackTrace());
     }
@@ -241,7 +300,7 @@ class Assign2Test extends TestCase{
       var output = "true";
       var input = "list?(null)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case _: Throwable => fail("list? null threw ");
     }
@@ -252,7 +311,7 @@ class Assign2Test extends TestCase{
       var output = "true";
       var input = "list?(cons(1, cons(2, null)))";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("list? threw " + e.printStackTrace());
     }
@@ -263,7 +322,7 @@ class Assign2Test extends TestCase{
       var output = "1";
       var input = "first(cons(1, cons(2, null)))";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("first threw " + e.printStackTrace());
     }
@@ -274,7 +333,7 @@ class Assign2Test extends TestCase{
       var output = "(2)";
       var input = "rest(cons(1, cons(2, null)))";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("rest threw " + e.printStackTrace());
     }
@@ -287,7 +346,7 @@ class Assign2Test extends TestCase{
       var output = "false";
       var input = "cons?(map x to 1)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("failcons threw " + e.printStackTrace());
     }
@@ -298,7 +357,7 @@ class Assign2Test extends TestCase{
       var output = "false";
       var input = "null?(3)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("failnull threw " + e.printStackTrace());
     }
@@ -309,7 +368,7 @@ class Assign2Test extends TestCase{
       var output = "false";
       var input = "number?(null)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("failnumber threw " + e.printStackTrace());
     }
@@ -320,7 +379,7 @@ class Assign2Test extends TestCase{
       var output = "false";
       var input = "function?(null)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("failfunction threw " + e.printStackTrace());
     }
@@ -331,7 +390,7 @@ class Assign2Test extends TestCase{
       var output = "false";
       var input = "list?(map x to 1)";
 
-      allCheck(output, input );
+      allValueCheck(output, input );
     } catch{
       case e: Throwable => fail("faillist threw " + e.printStackTrace());
     }
@@ -617,7 +676,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "6";
       var input = "let a:=b; b:=3; in (a+b)";
-      allCheck(output, input)
+      allValueCheck(output, input)
       fail("Did not throw for free variable");
     } catch{
       case e: SyntaxException =>  print(e.getMessage + "\n")
@@ -628,7 +687,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "haha";
       var input = "x + 5"
-      allCheck(output, input);
+      allValueCheck(output, input);
       fail("Did not throw for free variable");
     }catch{
       case e: SyntaxException => print(e.getMessage + "\n")
@@ -639,7 +698,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "JamClosure(map x,y to (x + y),Map())";
       var input = "(map x, y to x + y)";
-      allCheck(output, input)
+      allValueCheck(output, input)
 
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
@@ -650,7 +709,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "JamClosure(map x,x to (x + x),Map())";
       var input = "(map x, x to x + x)";
-      allCheck(output, input)
+      allValueCheck(output, input)
       fail("Did not throw for repeated variables");
     } catch{
       case e: SyntaxException => print(e.getMessage + "\n")
@@ -661,30 +720,30 @@ class Assign2Test extends TestCase{
     try {
       var output = "2";
       var input = "let x:=1; y := x +1; in y";
-      allCheck(output, input)
+      allValueCheck(output, input)
 
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
     }
   } //end of func
 
-  def testlet2() {
-    try {
-      var output = "2";
-      var input = "let y := x +1; x:=1; in y";
-      nameCheck(output, input)
-      needCheck(output, input)
-
-    } catch{
-      case e: Throwable => fail("throw" + e.printStackTrace());
-    }
-  } //end of func
+//  def testlet2() {
+//    try {
+//      var output = "2";
+//      var input = "let y := x +1; x:=1; in y";
+//      nameCheck(output, input)
+//      needCheck(output, input)
+//
+//    } catch{
+//      case e: Throwable => fail("throw" + e.printStackTrace());
+//    }
+//  } //end of func
 
   def testmapApp() {
     try {
       var output = "3";
       var input = "(map x, y to x + y)(1,2)";
-      allCheck(output, input)
+      allValueCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
     }
@@ -694,7 +753,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "";
       var input = "(map x, x to x + x)(1,3)";
-      allCheck(output, input)
+      allValueCheck(output, input)
       fail("Did not throw for repeated variables");
     } catch{
       case e: SyntaxException => print(e.getMessage + "\n")
@@ -705,7 +764,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "3";
       var input = "(map x, y to x + y)(1,x+1)";
-      allCheck(output, input)
+      allValueCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
     }
@@ -715,7 +774,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "true";
       var input = "(3 = 3) & (4 = 4)";
-      allCheck(output, input)
+      allValueCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
     }
@@ -725,7 +784,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "";
       var input = "(3 = 3) & 4";
-      allCheck(output, input)
+      allValueCheck(output, input)
       fail("Did not throw for binary And without boolean");
     } catch{
       case e: EvalException => print(e.getMessage + "\n")
@@ -736,7 +795,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "true";
       var input = "(3 = 3) | x";
-      allCheck(output, input)
+      allValueCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
     }
@@ -746,7 +805,7 @@ class Assign2Test extends TestCase{
     try {
       var output = "";
       var input = "(3 = 2) | 4";
-      allCheck(output, input)
+      allValueCheck(output, input)
       fail("Did not throw for binary Or without boolean");
     } catch{
       case e: EvalException => print(e.getMessage + "\n")
@@ -764,5 +823,119 @@ class Assign2Test extends TestCase{
 //  }
 
 
+  def testValueCons() {
+    try {
+      var output = "1";
+      var input = "first(cons(1, x))";
+      allValueCheck(output, input)
+      fail("not throw cons with free var")
+    } catch{
+      case e: SyntaxException => print(e.getMessage + "\n")
+    }
+  } //end of func
 
+  def testValueCons2() {
+  try {
+    var output = "1";
+    var input = "first(cons(1, cons(2, x)))";
+    allValueCheck(output, input)
+    fail("not throw cons with free var")
+  } catch{
+    case e: Throwable => print(e.getMessage + "\n")
+  }
+} //end of func
+
+  def testValueCons3() {
+    try {
+      var output = "1";
+      var input = "rest(cons(1, cons(2, x)))";
+      allValueCheck(output, input)
+      fail("not throw cons with free var")
+    } catch{
+      case e: Throwable => print(e.getMessage + "\n")
+    }
+  } //end of func
+
+  def testValueCons4() {
+  try {
+    var output = "1";
+    var input = "rest(cons(1, x))";
+    allValueCheck(output, input)
+    fail("not throw cons with free var")
+  } catch{
+    case e: Throwable => print(e.getMessage + "\n")
+  }
+} //end of func
+
+  def testNameCons() {
+    try {
+      var output = "1";
+      var input = "first(cons(1, x))";
+      allNameCheck(output, input)
+    } catch{
+      case e: Throwable => fail(e.getMessage)
+    }
+  } //end of func
+
+  def testNameCons2() {
+    try {
+      var output = "1";
+      var input = "rest(cons(1, x))";
+      allNameCheck(output, input)
+      fail("not throw cons with free var")
+    } catch{
+      case e: Throwable => print(e.getMessage + "\n")
+    }
+  } //end of func
+
+  def testNeedCons() {
+    try {
+      var output = "1";
+      var input = "first(cons(1, x))";
+      allNeedCheck(output, input)
+    } catch{
+      case e: Throwable => fail(e.getMessage)
+    }
+  } //end of func
+
+  def testNeedCons2() {
+    try {
+      var output = "1";
+      var input = "rest(cons(1, x))";
+      allNeedCheck(output, input)
+      fail("not throw cons with free var")
+    } catch{
+      case e: Throwable => print(e.getMessage + "\n")
+    }
+  } //end of func
+
+//  def testCons2() {
+//    try {
+//      var output = "2";
+//      var input = "first(rest(cons(1, cons(2, x))))";
+//      allNeedCheck(output, input)
+//    } catch{
+//      case e: Throwable => fail(e.getMessage)
+//    }
+//  } //end of func
+//
+//  def testCons3() {
+//    try {
+//      var output = "2";
+//      var input = "first(rest(cons(1, cons(2, x))))";
+//      allNameCheck(output, input)
+//    } catch{
+//      case e: Throwable => fail(e.getMessage)
+//    }
+//  } //end of func
+//
+//  def testCons4() {
+//    try {
+//      var output = "2";
+//      var input = "first(rest(cons(1, cons(2, x))))";
+//      allValueCheck(output, input)
+//    } catch{
+//      case e: Throwable => fail(e.getMessage)
+//    }
+//  } //end of func
 }

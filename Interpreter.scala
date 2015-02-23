@@ -31,13 +31,26 @@ class Interpreter(reader: java.io.Reader) {
   val ast: AST = new Parser(reader).parse()
 
   def makeConsValue[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
-    new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
+  helper(arg1, e) match {
+    case EmptyConstant => new JamListNEValue(first, EmptyConstant)
+    case j: JamListNEValue => new JamListNEValue(first, j)
+    case _ => throw new EvalException("The rest of cons is not of a valid type")
+  }
+//    new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
 
   def makeConsName[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
     new JamListNEName(first, helper, arg1, e)
 
   def makeConsNeed[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
     new JamListNENeed(first, helper, arg1, e)
+
+  def consFirstCheck[Tp](helper: (AST, Map[Symbol, Tp]) => JamVal, args: Array[AST], e: Map[Symbol, Tp]) =
+    helper(args(1), e) match {
+    case _ : JamList =>  helper(args(0), e)
+    case _ => throw new EvalException("arg1 is not a jam list, it is a " + args(1).getClass)
+  }
+
+  def consFirstUncheck[Tp](helper: (AST, Map[Symbol, Tp]) => JamVal, args: Array[AST], e: Map[Symbol, Tp]) = helper(args(0), e)
 
   def valueValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
     (e, defs, helper, untilNotVariable) => {
@@ -60,9 +73,8 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
       newMap
     },
-//    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
-    makeConsValue[ValueTuple]
-
+    makeConsValue[ValueTuple],
+    consFirstCheck[ValueTuple]
   )
 
   def nameValue: JamVal = callGeneral[NameTuple, JamListNEValue](
@@ -86,7 +98,8 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    makeConsValue[NameTuple]
+    makeConsValue[NameTuple],
+    consFirstCheck[NameTuple]
   )
 
   def needValue: JamVal = callGeneral[NeedTuple, JamListNEValue](
@@ -110,7 +123,8 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    makeConsValue[NeedTuple]
+    makeConsValue[NeedTuple],
+    consFirstCheck[NeedTuple]
   )
 
   def valueName: JamVal = callGeneral[ValueTuple, JamListNEName[ValueTuple]](
@@ -131,12 +145,10 @@ class Interpreter(reader: java.io.Reader) {
         newMap += pair
         newMap2 += pair
       })
-      //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
       newMap
     },
-    //    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
-    makeConsName[ValueTuple]
-
+    makeConsName[ValueTuple],
+    consFirstUncheck[ValueTuple]
   )
 
   def nameName: JamVal = callGeneral[NameTuple, JamListNEName[NameTuple]](
@@ -157,10 +169,10 @@ class Interpreter(reader: java.io.Reader) {
         newMap += pair
         newMap2 += pair
       })
-      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    makeConsName[NameTuple]
+    makeConsName[NameTuple],
+    consFirstUncheck[NameTuple]
   )
 
   def needName: JamVal = callGeneral[NeedTuple, JamListNEName[NeedTuple]](
@@ -181,10 +193,10 @@ class Interpreter(reader: java.io.Reader) {
         newMap += pair
         newMap2 += pair
       })
-      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    makeConsName[NeedTuple]
+    makeConsName[NeedTuple],
+    consFirstUncheck[NeedTuple]
   )
 
   def valueNeed: JamVal = callGeneral[ValueTuple, JamListNENeed[ValueTuple]](
@@ -205,12 +217,10 @@ class Interpreter(reader: java.io.Reader) {
         newMap += pair
         newMap2 += pair
       })
-      //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
       newMap
     },
-    //    (first, helper, arg1, e) => new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
-    makeConsNeed[ValueTuple]
-
+    makeConsNeed[ValueTuple],
+    consFirstUncheck[ValueTuple]
   )
 
   def nameNeed: JamVal = callGeneral[NameTuple, JamListNENeed[NameTuple]](
@@ -231,10 +241,10 @@ class Interpreter(reader: java.io.Reader) {
         newMap += pair
         newMap2 += pair
       })
-      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    makeConsNeed[NameTuple]
+    makeConsNeed[NameTuple],
+    consFirstUncheck[NameTuple]
   )
 
   def needNeed: JamVal = callGeneral[NeedTuple, JamListNENeed[NeedTuple]](
@@ -258,13 +268,15 @@ class Interpreter(reader: java.io.Reader) {
       //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
       newMap
     },
-    makeConsNeed[NeedTuple]
+    makeConsNeed[NeedTuple],
+    consFirstUncheck[NeedTuple]
   )
 
   private def callGeneral[Tp <: Tuple, Cons <: JamList](
                                         letBinding: (Map[Symbol, Tp], Array[Def], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
                                         appMapBinding: (Map[Symbol, Tp], Map[Symbol, Tp], Array[Variable], Array[AST], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
-                                                       makeCons: (JamVal, (AST, Map[Symbol, Tp]) => JamVal, AST, Map[Symbol, Tp]) => JamVal
+                                        makeCons: (JamVal, (AST, Map[Symbol, Tp]) => JamVal, AST, Map[Symbol, Tp]) => JamVal,
+                                        consFirst: ((AST, Map[Symbol, Tp]) => JamVal, Array[AST], Map[Symbol, Tp]) => JamVal
                                         ): JamVal = {
     def binIntOp(e: Map[Symbol, Tp], arg1: AST, arg2: AST, op: (Int, Int) => Int, exceptionContent: String) = (helper(arg1, e), helper(arg2, e)) match {
       case (IntConstant(value1: Int), IntConstant(value2: Int)) => IntConstant(op(value1, value2))
@@ -433,7 +445,7 @@ class Interpreter(reader: java.io.Reader) {
               case jl: Cons => jl.getFirst
               case _ => throw new EvalException("Calling FirstPrim on a non-list variable")
             }
-            case App(ConsPrim, l) => helper(l(0), e)
+            case App(ConsPrim, l) => consFirst(helper, l, e)
             case _ => throw new EvalException("arg0 is not a jam list, it is a " + args(0).getClass)
           }
 
