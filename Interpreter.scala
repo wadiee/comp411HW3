@@ -389,44 +389,43 @@ class Interpreter(reader: java.io.Reader) {
         // PrimFun
         case FunctionPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument")
-          args(0) match {
+          helper(args(0), e) match {
             case _: JamFun => True
             case _ => False
           }
 
         case NumberPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument for NumberPPrim")
-          args(0) match {
+          helper(args(0), e) match {
             case IntConstant(_) => True
             case _ => False
           }
 
         case ListPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument for ListPPrim")
-          args(0) match {
-            case EmptyConstant => True
-            case App(ConsPrim, _) => True
+          helper(args(0), e) match {
+            case _ : JamList => True
             case _ => False
           }
 
         case ConsPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument for ConsPPrim")
-          args(0) match {
-            case App(ConsPrim, _) => True
+          helper(args(0), e) match {
+            case _ : JamList => True
             case _ => False
           }
 
         case EmptyPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument for EmptyPPrim")
-          args(0) match {
+          helper(args(0), e) match {
             case EmptyConstant => True
             case _ => False
           }
 
         case ArityPrim =>
           if (args.length != 1) throw new EvalException("Should have one arguments")
-          args(0) match {
-            case MapLiteral(vars, _) => IntConstant(vars.length)
+          helper(args(0), e) match {
+            case JamClosure(body: MapLiteral, env: Map[Symbol, Tp]) => IntConstant(body.vars.length)
             case ConsPrim => IntConstant(2)
             case _: PrimFun => IntConstant(1)
             case _ => throw new EvalException("arg0 is not a function")
@@ -440,23 +439,30 @@ class Interpreter(reader: java.io.Reader) {
 
         case FirstPrim =>
           if (args.length != 1) throw new EvalException("Should have one arguments")
-          args(0) match {
-            case va: Variable => e(va.sym).getJamVal match {
-              case jl: Cons => jl.getFirst
-              case _ => throw new EvalException("Calling FirstPrim on a non-list variable")
-            }
-            case App(ConsPrim, l) => consFirst(helper, l, e)
+          helper(args(0),e) match {
+//            case EmptyConstant =>
+            case EmptyConstant => throw new EvalException("arg0 is empty, it is a " + args(0).getClass)
+            case c: Cons => c.getFirst
+//            case va: Variable => e(va.sym).getJamVal match {
+//              case jl: Cons => jl.getFirst
+//              case _ => throw new EvalException("Calling FirstPrim on a non-list variable")
+//            }
+//            case App(ConsPrim, l) => consFirst(helper, l, e)
+//            case App(RestPrim, l) => ???
+
             case _ => throw new EvalException("arg0 is not a jam list, it is a " + args(0).getClass)
           }
 
         case RestPrim =>
           if (args.length != 1) throw new EvalException("Should have one arguments")
-          args(0) match {
-            case va: Variable => e(va.sym).getJamVal match {
-              case jl: Cons => jl.getRest
-              case _ => throw new EvalException("Calling RestPrim on a non-list variable")
-            }
-            case App(ConsPrim, l) => helper(l(1), e)
+          helper(args(0),e) match {
+            case EmptyConstant => throw new EvalException("arg0 is empty, it is a " + args(0).getClass)
+            case c: Cons => c.getRest
+//            case va: Variable => e(va.sym).getJamVal match {
+//              case jl: Cons => jl.getRest
+//              case _ => throw new EvalException("Calling RestPrim on a non-list variable")
+//            }
+//            case App(ConsPrim, l) => helper(l(1), e)
             case _ => throw new EvalException("arg0 is not a jam list, it is a " + args(0).getClass)
           }
 

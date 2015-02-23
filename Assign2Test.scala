@@ -273,10 +273,43 @@ class Assign2Test extends TestCase{
     }
   } //end of func
 
+  def testOutputNumberLet() {
+    try {
+      var output = "true";
+      var input = "let x := 1; \n in number?(x)";
+
+      allValueCheck(output, input );
+    } catch{
+      case e: Throwable => fail(e.getMessage);
+    }
+  } //end of func
+
+  def testOutputConPPrimLet() {
+    try {
+      var output = "true";
+      var input = "let x := cons(1, null); \n in cons?(x)";
+
+      allValueCheck(output, input );
+    } catch{
+      case e: Throwable => fail(e.getMessage);
+    }
+  } //end of func
+
   def testOutputFunction() {
     try {
       var output = "true";
       var input = "function?(number?)";
+
+      allValueCheck(output, input );
+    } catch{
+      case _: Throwable => fail("function? threw ");
+    }
+  } //end of func
+
+  def testOutputFunction1() {
+    try {
+      var output = "true";
+      var input = "function?(map x to x)";
 
       allValueCheck(output, input );
     } catch{
@@ -909,33 +942,34 @@ class Assign2Test extends TestCase{
     }
   } //end of func
 
-//  def testCons2() {
-//    try {
-//      var output = "2";
-//      var input = "first(rest(cons(1, cons(2, x))))";
-//      allNeedCheck(output, input)
-//    } catch{
-//      case e: Throwable => fail(e.getMessage)
-//    }
-//  } //end of func
-//
-//  def testCons3() {
-//    try {
-//      var output = "2";
-//      var input = "first(rest(cons(1, cons(2, x))))";
-//      allNameCheck(output, input)
-//    } catch{
-//      case e: Throwable => fail(e.getMessage)
-//    }
-//  } //end of func
-//
-//  def testCons4() {
-//    try {
-//      var output = "2";
-//      var input = "first(rest(cons(1, cons(2, x))))";
-//      allValueCheck(output, input)
-//    } catch{
-//      case e: Throwable => fail(e.getMessage)
-//    }
-//  } //end of func
+  def testCons2() {
+    try {
+      var output = "2";
+      var input = "first(rest(cons(1, cons(2, x))))";
+      allNeedCheck(output, input)
+    } catch{
+      case e: Throwable => fail(e.getMessage)
+    }
+  } //end of func
+
+  def testCons3() {
+    try {
+      var output = "2";
+      var input = "first(rest(cons(1, cons(2, x))))";
+      allNameCheck(output, input)
+    } catch{
+      case e: Throwable => fail(e.getMessage)
+    }
+  } //end of func
+
+  def testCons4() {
+    try {
+      var output = "2";
+      var input = "first(rest(cons(1, cons(2, x))))";
+      allValueCheck(output, input)
+      fail("not throw cons with free var")
+    } catch{
+      case e: Throwable => print(e.getMessage + "\n")
+    }
+  } //end of func
 }
