@@ -4,18 +4,6 @@ class Interpreter(reader: java.io.Reader) {
 
   val ast: AST = new Parser(reader).parse()
 
-//  private def bindRecLetValue(e: Env[ValueTuple], defs: Array[Def], evaluate: (AST, Env[ValueTuple]) => JamVal, untilNotVariable: (AST, Env[ValueTuple]) => AST) = {
-//    var newMap = e
-//    var proxyList = List[Env[ValueTuple]]()
-//    defs.foreach(d => {
-//      val thisProxy = new ProxyEnv[ValueTuple]
-//      newMap += (d.lhs.sym, new ValueTuple(evaluate, untilNotVariable, thisProxy, d.rhs))
-//      proxyList = thisProxy :: proxyList
-//    })
-//    // Set new map to the proxy
-//    proxyList.foreach(proxy => proxy.setMap(newMap.getMap))
-//    newMap
-//  }
   private def bindRecLetName(e: Env[NameTuple], defs: Array[Def], evaluate: (AST, Env[NameTuple]) => JamVal, untilNotVariable: (AST, Env[NameTuple]) => AST) = {
       var newMap = e
       var proxyList = List[Env[NameTuple]]()
@@ -41,6 +29,40 @@ class Interpreter(reader: java.io.Reader) {
     newMap
   }
 
+  private def bindAppMapValue(en: Env[ValueTuple], e: Env[ValueTuple], vars: Array[Variable], args: Array[AST], evaluate: (AST, Env[ValueTuple]) => JamVal, untilNotVariable: (AST, Env[ValueTuple]) => AST) = {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new ValueTuple(evaluate(p._2, newMap2), untilNotVariable(p._2, newMap2)))
+        newMap += pair
+        newMap2 += pair
+      })
+      newMap
+  }
+  private def bindAppMapName(en: Env[NameTuple], e: Env[NameTuple], vars: Array[Variable], args: Array[AST], evaluate: (AST, Env[NameTuple]) => JamVal, untilNotVariable: (AST, Env[NameTuple]) => AST) = {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new NameTuple(evaluate, untilNotVariable, newMap2, p._2))
+        newMap += pair
+        newMap2 += pair
+      })
+      newMap
+  }
+  private def bindAppMapNeed(en: Env[NeedTuple], e: Env[NeedTuple], vars: Array[Variable], args: Array[AST], evaluate: (AST, Env[NeedTuple]) => JamVal, untilNotVariable: (AST, Env[NeedTuple]) => AST) = {
+    var newMap = en
+    var newMap2 = e
+    if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+    vars.zip(args).foreach(p => {
+      var pair = (p._1.sym, new NeedTuple(evaluate, untilNotVariable, newMap2, p._2))
+      newMap += pair
+      newMap2 += pair
+    })
+    newMap
+  }
+
   private def makeConsValue[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal =
   evaluate(arg1, e) match {
     case EmptyConstant => new JamListNEValue(first, EmptyConstant)
@@ -59,50 +81,17 @@ class Interpreter(reader: java.io.Reader) {
       })
       newMap
     },
-//    bindRecLetValue,
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new ValueTuple(evaluate(p._2, newMap2), untilNotVariable(p._2, newMap2)))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapValue,
     makeConsValue[ValueTuple]
   )
-
   def nameValue: JamVal = callGeneral[NameTuple, JamListNEValue](
     bindRecLetName,
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NameTuple(evaluate, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapName,
     makeConsValue[NameTuple]
   )
-
   def needValue: JamVal = callGeneral[NeedTuple, JamListNEValue](
     bindRecLetNeed,
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NeedTuple(evaluate, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapNeed,
     makeConsValue[NeedTuple]
   )
 
@@ -115,49 +104,17 @@ class Interpreter(reader: java.io.Reader) {
       })
       newMap
     },
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new ValueTuple(evaluate(p._2, newMap2), untilNotVariable(p._2, newMap2)))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapValue,
     makeConsName[ValueTuple]
   )
-
   def nameName: JamVal = callGeneral[NameTuple, JamListNEName[NameTuple]](
     bindRecLetName,
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NameTuple(evaluate, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapName,
     makeConsName[NameTuple]
   )
-
   def needName: JamVal = callGeneral[NeedTuple, JamListNEName[NeedTuple]](
     bindRecLetNeed,
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NeedTuple(evaluate, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapNeed,
     makeConsName[NeedTuple]
   )
 
@@ -170,49 +127,17 @@ class Interpreter(reader: java.io.Reader) {
       })
       newMap
     },
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new ValueTuple(evaluate(p._2, newMap2), untilNotVariable(p._2, newMap2)))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapValue,
     makeConsNeed[ValueTuple]
   )
-
   def nameNeed: JamVal = callGeneral[NameTuple, JamListNENeed[NameTuple]](
     bindRecLetName,
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NameTuple(evaluate, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapName,
     makeConsNeed[NameTuple]
   )
-
   def needNeed: JamVal = callGeneral[NeedTuple, JamListNENeed[NeedTuple]](
     bindRecLetNeed,
-    (en, e, vars, args, evaluate, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NeedTuple(evaluate, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
+    bindAppMapNeed,
     makeConsNeed[NeedTuple]
   )
 

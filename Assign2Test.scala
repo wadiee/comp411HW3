@@ -759,18 +759,6 @@ class Assign2Test extends TestCase{
     }
   } //end of func
 
-//  def testlet2() {
-//    try {
-//      val output = "2"
-//      val input = "let y := x +1; x:=1; in y"
-//      nameCheck(output, input)
-//      needCheck(output, input)
-//
-//    } catch{
-//      case e: Throwable => fail("throw" + e.printStackTrace());
-//    }
-//  } //end of func
-
   def testmapApp() {
     try {
       val output = "3"
@@ -986,4 +974,19 @@ class Assign2Test extends TestCase{
       case e: Throwable => fail(e.getMessage)
     }
   }
+
+    def testlet3() {
+      try {
+        val output = "2"
+        val input = "let y := x +1; x:=1; in y"
+        nameValueCheck(output, input)
+        nameNameCheck(output, input)
+        nameNeedCheck(output, input)
+        needValueCheck(output, input)
+        needNameCheck(output, input)
+        needNeedCheck(output, input)
+      } catch{
+        case e: Throwable => fail("throw" + e.printStackTrace());
+      }
+    } //end of func
 }
