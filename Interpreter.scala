@@ -1,312 +1,180 @@
 /** file Interpreter.scala **/
-
-abstract class Tuple {
-  def getJamVal: JamVal
-  def getAST: AST
-}
-
-class ValueTuple(jamVal: JamVal, ast: AST) extends Tuple{
-  override def getJamVal: JamVal = jamVal
-  override def getAST: AST = ast
-}
-
-class NameTuple(helper: (AST, Map[Symbol, NameTuple]) => JamVal, notUntil: (AST, Map[Symbol, NameTuple]) => AST, env: Map[Symbol, NameTuple], rawVar: AST) extends Tuple{
-  override def getJamVal: JamVal = helper(rawVar, env)
-  override def getAST: AST = notUntil(rawVar, env)
-}
-
-class NeedTuple(helper: (AST, Map[Symbol, NeedTuple]) => JamVal, notUntil: (AST, Map[Symbol, NeedTuple]) => AST, env: Map[Symbol, NeedTuple], rawVar: AST) extends Tuple{
-  lazy val jamVal = helper(rawVar, env)
-  lazy val lazyAst = notUntil(rawVar, env)
-  override def getJamVal: JamVal = jamVal
-  override def getAST: AST = lazyAst
-}
-
-class EvalException(msg: String) extends RuntimeException(msg)
-class SyntaxException(msg: String) extends RuntimeException(msg)
-
 class Interpreter(reader: java.io.Reader) {
   def this(fileName: String) = this(new java.io.FileReader(fileName))
 
   val ast: AST = new Parser(reader).parse()
 
-  def makeConsValue[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
-  helper(arg1, e) match {
+  private def bindRecLetName(e: Env[NameTuple], defs: Array[Def], evaluate: (AST, Env[NameTuple]) => JamVal, untilNotVariable: (AST, Env[NameTuple]) => AST) = {
+      var newMap = e
+      var proxyList = List[Env[NameTuple]]()
+      defs.foreach(d => {
+        val thisProxy = new ProxyEnv[NameTuple]
+        newMap += (d.lhs.sym, new NameTuple(evaluate, untilNotVariable, thisProxy, d.rhs))
+        proxyList = thisProxy :: proxyList
+      })
+      // Set new map to the proxy
+      proxyList.foreach(proxy => proxy.setMap(newMap.getMap))
+      newMap
+  }
+  private def bindRecLetNeed(e: Env[NeedTuple], defs: Array[Def], evaluate: (AST, Env[NeedTuple]) => JamVal, untilNotVariable: (AST, Env[NeedTuple]) => AST) = {
+    var newMap = e
+    var proxyList = List[Env[NeedTuple]]()
+    defs.foreach(d => {
+      val thisProxy = new ProxyEnv[NeedTuple]
+      newMap += (d.lhs.sym, new NeedTuple(evaluate, untilNotVariable, thisProxy, d.rhs))
+      proxyList = thisProxy :: proxyList
+    })
+    // Set new map to the proxy
+    proxyList.foreach(proxy => proxy.setMap(newMap.getMap))
+    newMap
+  }
+
+  private def bindAppMapValue(en: Env[ValueTuple], e: Env[ValueTuple], vars: Array[Variable], args: Array[AST], evaluate: (AST, Env[ValueTuple]) => JamVal, untilNotVariable: (AST, Env[ValueTuple]) => AST) = {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new ValueTuple(evaluate(p._2, newMap2), untilNotVariable(p._2, newMap2)))
+        newMap += pair
+        newMap2 += pair
+      })
+      newMap
+  }
+  private def bindAppMapName(en: Env[NameTuple], e: Env[NameTuple], vars: Array[Variable], args: Array[AST], evaluate: (AST, Env[NameTuple]) => JamVal, untilNotVariable: (AST, Env[NameTuple]) => AST) = {
+      var newMap = en
+      var newMap2 = e
+      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+      vars.zip(args).foreach(p => {
+        var pair = (p._1.sym, new NameTuple(evaluate, untilNotVariable, newMap2, p._2))
+        newMap += pair
+        newMap2 += pair
+      })
+      newMap
+  }
+  private def bindAppMapNeed(en: Env[NeedTuple], e: Env[NeedTuple], vars: Array[Variable], args: Array[AST], evaluate: (AST, Env[NeedTuple]) => JamVal, untilNotVariable: (AST, Env[NeedTuple]) => AST) = {
+    var newMap = en
+    var newMap2 = e
+    if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
+    vars.zip(args).foreach(p => {
+      var pair = (p._1.sym, new NeedTuple(evaluate, untilNotVariable, newMap2, p._2))
+      newMap += pair
+      newMap2 += pair
+    })
+    newMap
+  }
+
+  private def makeConsValue[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal =
+  evaluate(arg1, e) match {
     case EmptyConstant => new JamListNEValue(first, EmptyConstant)
     case j: JamListNEValue => new JamListNEValue(first, j)
     case _ => throw new EvalException("The rest of cons is not of a valid type")
   }
-//    new JamListNEValue(first, helper(arg1, e).asInstanceOf[JamList])
-
-  def makeConsName[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
-    new JamListNEName(first, helper, arg1, e)
-
-  def makeConsNeed[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
-    new JamListNENeed(first, helper, arg1, e)
-
-  def consFirstCheck[Tp](helper: (AST, Map[Symbol, Tp]) => JamVal, args: Array[AST], e: Map[Symbol, Tp]) =
-    helper(args(1), e) match {
-    case _ : JamList =>  helper(args(0), e)
-    case _ => throw new EvalException("arg1 is not a jam list, it is a " + args(1).getClass)
-  }
-
-  def consFirstUncheck[Tp](helper: (AST, Map[Symbol, Tp]) => JamVal, args: Array[AST], e: Map[Symbol, Tp]) = helper(args(0), e)
+  private def makeConsName[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal = new JamListNEName(first, evaluate, arg1, e)
+  private def makeConsNeed[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal = new JamListNENeed(first, evaluate, arg1, e)
 
   def valueValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
-    (e, defs, helper, untilNotVariable) => {
+    (e, defs, evaluate, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
-        var pair = (d.lhs.sym, new ValueTuple(helper(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        var pair = (d.lhs.sym, new ValueTuple(evaluate(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
         newMap += pair
       })
       newMap
     },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new ValueTuple(helper(p._2, newMap2), untilNotVariable(p._2, newMap2)))
-        newMap += pair
-        newMap2 += pair
-      })
-      //vars.zip(args).map(pair => (pair._1.sym, new ValueTuple(helper(pair._2, e), untilNotVariable(pair._2, e)))).foreach(pair => newMap += (pair))
-      newMap
-    },
-    makeConsValue[ValueTuple],
-    consFirstCheck[ValueTuple]
+    bindAppMapValue,
+    makeConsValue[ValueTuple]
   )
-
   def nameValue: JamVal = callGeneral[NameTuple, JamListNEValue](
-    (e, defs, helper, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NameTuple(helper, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NameTuple(helper, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
-      newMap
-    },
-    makeConsValue[NameTuple],
-    consFirstCheck[NameTuple]
+    bindRecLetName,
+    bindAppMapName,
+    makeConsValue[NameTuple]
   )
-
   def needValue: JamVal = callGeneral[NeedTuple, JamListNEValue](
-    (e, defs, helper, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NeedTuple(helper, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NeedTuple(helper, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
-      newMap
-    },
-    makeConsValue[NeedTuple],
-    consFirstCheck[NeedTuple]
+    bindRecLetNeed,
+    bindAppMapNeed,
+    makeConsValue[NeedTuple]
   )
 
   def valueName: JamVal = callGeneral[ValueTuple, JamListNEName[ValueTuple]](
-    (e, defs, helper, untilNotVariable) => {
+    (e, defs, evaluate, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
-        var pair = (d.lhs.sym, new ValueTuple(helper(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        var pair = (d.lhs.sym, new ValueTuple(evaluate(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
         newMap += pair
       })
       newMap
     },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new ValueTuple(helper(p._2, newMap2), untilNotVariable(p._2, newMap2)))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
-    makeConsName[ValueTuple],
-    consFirstUncheck[ValueTuple]
+    bindAppMapValue,
+    makeConsName[ValueTuple]
   )
-
   def nameName: JamVal = callGeneral[NameTuple, JamListNEName[NameTuple]](
-    (e, defs, helper, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NameTuple(helper, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NameTuple(helper, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
-    makeConsName[NameTuple],
-    consFirstUncheck[NameTuple]
+    bindRecLetName,
+    bindAppMapName,
+    makeConsName[NameTuple]
   )
-
   def needName: JamVal = callGeneral[NeedTuple, JamListNEName[NeedTuple]](
-    (e, defs, helper, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NeedTuple(helper, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NeedTuple(helper, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
-    makeConsName[NeedTuple],
-    consFirstUncheck[NeedTuple]
+    bindRecLetNeed,
+    bindAppMapNeed,
+    makeConsName[NeedTuple]
   )
 
   def valueNeed: JamVal = callGeneral[ValueTuple, JamListNENeed[ValueTuple]](
-    (e, defs, helper, untilNotVariable) => {
+    (e, defs, evaluate, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
-        var pair = (d.lhs.sym, new ValueTuple(helper(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        var pair = (d.lhs.sym, new ValueTuple(evaluate(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
         newMap += pair
       })
       newMap
     },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new ValueTuple(helper(p._2, newMap2), untilNotVariable(p._2, newMap2)))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
-    makeConsNeed[ValueTuple],
-    consFirstUncheck[ValueTuple]
+    bindAppMapValue,
+    makeConsNeed[ValueTuple]
   )
-
   def nameNeed: JamVal = callGeneral[NameTuple, JamListNENeed[NameTuple]](
-    (e, defs, helper, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NameTuple(helper, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NameTuple(helper, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      newMap
-    },
-    makeConsNeed[NameTuple],
-    consFirstUncheck[NameTuple]
+    bindRecLetName,
+    bindAppMapName,
+    makeConsNeed[NameTuple]
   )
-
   def needNeed: JamVal = callGeneral[NeedTuple, JamListNENeed[NeedTuple]](
-    (e, defs, helper, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NeedTuple(helper, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
-    (en, e, vars, args, helper, untilNotVariable) => {
-      var newMap = en
-      var newMap2 = e
-      if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-      vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new NeedTuple(helper, untilNotVariable, newMap2, p._2))
-        newMap += pair
-        newMap2 += pair
-      })
-      //vars.zip(args).map(pair => (pair._1.sym, new NeedTuple(helper, untilNotVariable, e, pair._2))).foreach(pair => newMap += (pair))
-      newMap
-    },
-    makeConsNeed[NeedTuple],
-    consFirstUncheck[NeedTuple]
+    bindRecLetNeed,
+    bindAppMapNeed,
+    makeConsNeed[NeedTuple]
   )
 
   private def callGeneral[Tp <: Tuple, Cons <: JamList](
-                                        letBinding: (Map[Symbol, Tp], Array[Def], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
-                                        appMapBinding: (Map[Symbol, Tp], Map[Symbol, Tp], Array[Variable], Array[AST], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
-                                        makeCons: (JamVal, (AST, Map[Symbol, Tp]) => JamVal, AST, Map[Symbol, Tp]) => JamVal,
-                                        consFirst: ((AST, Map[Symbol, Tp]) => JamVal, Array[AST], Map[Symbol, Tp]) => JamVal
+                                        letBinding: (Env[Tp], Array[Def], (AST, Env[Tp]) => JamVal, (AST, Env[Tp]) => AST) => Env[Tp],
+                                        appMapBinding: (Env[Tp], Env[Tp], Array[Variable], Array[AST], (AST, Env[Tp]) => JamVal, (AST, Env[Tp]) => AST) => Env[Tp],
+                                        makeCons: (JamVal, (AST, Env[Tp]) => JamVal, AST, Env[Tp]) => JamVal
                                         ): JamVal = {
-    def binIntOp(e: Map[Symbol, Tp], arg1: AST, arg2: AST, op: (Int, Int) => Int, exceptionContent: String) = (helper(arg1, e), helper(arg2, e)) match {
+    def binIntOp(e: Env[Tp], arg1: AST, arg2: AST, op: (Int, Int) => Int, exceptionContent: String) = (evaluate(arg1, e), evaluate(arg2, e)) match {
       case (IntConstant(value1: Int), IntConstant(value2: Int)) => IntConstant(op(value1, value2))
       case _ => throw new EvalException(exceptionContent)
     }
-    def binIntCmpOp(e: Map[Symbol, Tp], arg1: AST, arg2: AST, op: (Int, Int) => Boolean, exceptionContent: String) = (helper(arg1, e), helper(arg2, e)) match {
+    def binIntCmpOp(e: Env[Tp], arg1: AST, arg2: AST, op: (Int, Int) => Boolean, exceptionContent: String) = (evaluate(arg1, e), evaluate(arg2, e)) match {
       case (IntConstant(value1: Int), IntConstant(value2: Int)) => op(value1, value2) match {
         case true => True
         case false => False
       }
       case _ => throw new EvalException(exceptionContent)
     }
-    def UnIntOp(e: Map[Symbol, Tp], arg: AST, op: Int => Int, exceptionContent: String) = helper(arg, e) match {
+    def UnIntOp(e: Env[Tp], arg: AST, op: Int => Int, exceptionContent: String) = evaluate(arg, e) match {
       case (IntConstant(value: Int)) => IntConstant(op(value))
       case _ => throw new EvalException(exceptionContent)
     }
-    def untilNotVariable(input: AST, e: Map[Symbol, Tp]): AST = {
+    def untilNotVariable(input: AST, e: Env[Tp]): AST = {
       input match {
-        case vv: Variable => untilNotVariable(e(vv.sym).getAST, e)
+        case vv: Variable => untilNotVariable(e.get(vv.sym).getAST, e)
         case _ => input
       }
     }
 
-    def helper(ast: AST, e: Map[Symbol, Tp]): JamVal = ast match {
+    def evaluate(ast: AST, e: Env[Tp]): JamVal = ast match {
       case BinOpApp(binOpPlus: BinOp, arg1: AST, arg2: AST) => binOpPlus match {
         case BinOpPlus => binIntOp(e, arg1, arg2, _ + _, "BinOpPlus not with int")
         case BinOpMinus => binIntOp(e, arg1, arg2, _ - _, "BinOpMinus not with int")
         case OpTimes => binIntOp(e, arg1, arg2, _ * _, "OpTimes not with int")
         case OpDivide => binIntOp(e, arg1, arg2, _ / _, "OpDivide not with int")
-        case OpEquals => (helper(arg1, e), helper(arg2, e)) match {
+        case OpEquals => (evaluate(arg1, e), evaluate(arg2, e)) match {
           case (int1: IntConstant, int2: IntConstant) => int1.value == int2.value match {
             case true => True
             case false => False
@@ -316,7 +184,7 @@ class Interpreter(reader: java.io.Reader) {
             case false => False
           }
         }
-        case OpNotEquals => (helper(arg1, e), helper(arg2, e)) match {
+        case OpNotEquals => (evaluate(arg1, e), evaluate(arg2, e)) match {
           case (int1: IntConstant, int2: IntConstant) => int1.value != int2.value match {
             case true => True
             case false => False
@@ -330,17 +198,17 @@ class Interpreter(reader: java.io.Reader) {
         case OpGreaterThan => binIntCmpOp(e, arg1, arg2, _ > _, "BinOpGreaterthan not with int")
         case OpLessThanEquals => binIntCmpOp(e, arg1, arg2, _ <= _, "BinOpLessthanEq not with int")
         case OpGreaterThanEquals => binIntCmpOp(e, arg1, arg2, _ >= _, "BinOpGreaterthanEq not with int")
-        case OpAnd => helper(arg1, e) match {
+        case OpAnd => evaluate(arg1, e) match {
           case False => False
-          case True => helper(arg2, e) match {
+          case True => evaluate(arg2, e) match {
             case bool: BoolConstant => bool
             case _ => throw new EvalException("And operation arg2 is not boolean")
           }
           case _ => throw new EvalException("And operation arg1 is not boolean")
         }
-        case OpOr => helper(arg1, e) match {
+        case OpOr => evaluate(arg1, e) match {
           case True => True
-          case False => helper(arg2, e) match {
+          case False => evaluate(arg2, e) match {
             case bool: BoolConstant => bool
             case _ => throw new EvalException("Or operation arg2 is not boolean")
           }
@@ -348,84 +216,78 @@ class Interpreter(reader: java.io.Reader) {
         }
       }
       // The followings are below Term
-      case If(test: AST, conseq: AST, alt: AST) => helper(test, e) match {
-        case True => helper(conseq, e)
-        case False => helper(alt, e)
+      case If(test: AST, conseq: AST, alt: AST) => evaluate(test, e) match {
+        case True => evaluate(conseq, e)
+        case False => evaluate(alt, e)
         case _ => throw new EvalException("If condition is not boolean")
       }
-      case Let(defs: Array[Def], body: AST) => {
-        var repeatedMap = defs.map(d => d.lhs).groupBy(l => l).map(t => (t._1, t._2.length)).filter(pair => pair._2 > 1)
+      case Let(defs: Array[Def], body: AST) =>
+        val repeatedMap = defs.map(d => d.lhs).groupBy(l => l).map(t => (t._1, t._2.length)).filter(pair => pair._2 > 1)
         if (repeatedMap.size > 0) throw new SyntaxException(repeatedMap.keys + " are repeatedly defined variables")
-        else helper(body, letBinding(e, defs, helper, untilNotVariable))
-      }
+        else evaluate(body, letBinding(e, defs, evaluate, untilNotVariable))
 
       // Constant
       case EmptyConstant => EmptyConstant
       case b: BoolConstant => b
       case i: IntConstant => i
 
-      case Variable(sym: Symbol) => {
-        if (e.contains(sym)) e(sym).getJamVal
-        else throw new SyntaxException(sym + " is a free variable!")
-      }
+      case Variable(sym: Symbol) => if (e.contains(sym)) e.get(sym).getJamVal else throw new SyntaxException(sym + " is a free variable!")
 
       case UnOpApp(rator: UnOp, arg: AST) => rator match {
         case UnOpPlus =>  UnIntOp(e, arg, + _, "unary plus without int")
         case UnOpMinus => UnIntOp(e, arg, - _, "unary minus without int")
-        case OpTilde => helper(arg, e) match {
+        case OpTilde => evaluate(arg, e) match {
           case True => False
           case False => True
           case _ => throw new EvalException("Tilde without Boolean")
         }
       }
-      case maplit: MapLiteral => {
-        var repeatedMap = maplit.vars.groupBy(l => l).map(t => (t._1, t._2.length)).filter(pair => pair._2 > 1)
+      case maplit: MapLiteral =>
+        val repeatedMap = maplit.vars.groupBy(l => l).map(t => (t._1, t._2.length)).filter(pair => pair._2 > 1)
         if (repeatedMap.size > 0) throw new SyntaxException(repeatedMap.keys + " are repeatedly defined variables")
         else JamClosure[Tp](maplit, e)
-      }
 
-
-      case App(rator: AST, args: Array[AST]) => helper(rator, e) match {
+      case App(rator: AST, args: Array[AST]) => evaluate(rator, e) match {
         // PrimFun
         case FunctionPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument")
-          helper(args(0), e) match {
+          evaluate(args(0), e) match {
             case _: JamFun => True
             case _ => False
           }
 
         case NumberPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument for NumberPPrim")
-          helper(args(0), e) match {
+          evaluate(args(0), e) match {
             case IntConstant(_) => True
             case _ => False
           }
 
         case ListPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument for ListPPrim")
-          helper(args(0), e) match {
+          evaluate(args(0), e) match {
             case _ : JamList => True
             case _ => False
           }
 
         case ConsPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument for ConsPPrim")
-          helper(args(0), e) match {
+          evaluate(args(0), e) match {
             case _ : JamList => True
             case _ => False
           }
 
         case EmptyPPrim =>
           if (args.length != 1) throw new EvalException("Should have one argument for EmptyPPrim")
-          helper(args(0), e) match {
+          evaluate(args(0), e) match {
             case EmptyConstant => True
             case _ => False
           }
 
         case ArityPrim =>
           if (args.length != 1) throw new EvalException("Should have one arguments")
-          helper(args(0), e) match {
-            case JamClosure(body: MapLiteral, env: Map[Symbol, Tp]) => IntConstant(body.vars.length)
+          evaluate(args(0), e) match {
+            case JamClosure(body: MapLiteral, env: Env[Tp]) => IntConstant(body.vars.length)
             case ConsPrim => IntConstant(2)
             case _: PrimFun => IntConstant(1)
             case _ => throw new EvalException("arg0 is not a function")
@@ -433,51 +295,35 @@ class Interpreter(reader: java.io.Reader) {
 
         case ConsPrim =>
           if (args.length != 2) throw new EvalException("Should have two arguments")
-//          new JamListNEValue(helper(args(0), e), helper(args(1), e).asInstanceOf[JamList])
-          makeCons(helper(args(0), e), helper, args(1), e)
-
+          makeCons(evaluate(args(0), e), evaluate, args(1), e)
 
         case FirstPrim =>
           if (args.length != 1) throw new EvalException("Should have one arguments")
-          helper(args(0),e) match {
-//            case EmptyConstant =>
+          evaluate(args(0),e) match {
             case EmptyConstant => throw new EvalException("arg0 is empty, it is a " + args(0).getClass)
             case c: Cons => c.getFirst
-//            case va: Variable => e(va.sym).getJamVal match {
-//              case jl: Cons => jl.getFirst
-//              case _ => throw new EvalException("Calling FirstPrim on a non-list variable")
-//            }
-//            case App(ConsPrim, l) => consFirst(helper, l, e)
-//            case App(RestPrim, l) => ???
-
             case _ => throw new EvalException("arg0 is not a jam list, it is a " + args(0).getClass)
           }
 
         case RestPrim =>
           if (args.length != 1) throw new EvalException("Should have one arguments")
-          helper(args(0),e) match {
+          evaluate(args(0),e) match {
             case EmptyConstant => throw new EvalException("arg0 is empty, it is a " + args(0).getClass)
             case c: Cons => c.getRest
-//            case va: Variable => e(va.sym).getJamVal match {
-//              case jl: Cons => jl.getRest
-//              case _ => throw new EvalException("Calling RestPrim on a non-list variable")
-//            }
-//            case App(ConsPrim, l) => helper(l(1), e)
             case _ => throw new EvalException("arg0 is not a jam list, it is a " + args(0).getClass)
           }
 
-        case JamClosure(MapLiteral(vars, body), en: Map[Symbol, Tp]) => {
+        case JamClosure(MapLiteral(vars, body), en: Env[Tp]) =>
           // Bind
           if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
-
-          var repeatedMap = vars.groupBy(l => l).map(p => (p._1, p._2.length)).filter(p => p._2 > 1)
+          val repeatedMap = vars.groupBy(l => l).map(p => (p._1, p._2.length)).filter(p => p._2 > 1)
           if(repeatedMap.size > 1) throw new SyntaxException(repeatedMap + " are repeatedly defined variables.")
-          else helper(body, appMapBinding(en, e, vars, args, helper, untilNotVariable))
-        }
+          else evaluate(body, appMapBinding(en, e, vars, args, evaluate, untilNotVariable))
+
         case _=> throw new EvalException("Did not match. Got a class: " + rator.getClass)
       }
       case pf: PrimFun => pf
     }
-    helper(ast, Map())
+    evaluate(ast, new ConcreteEnv[Tp](Map[Symbol, Tp]()))
   }
 }

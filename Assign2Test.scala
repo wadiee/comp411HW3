@@ -1,5 +1,4 @@
 import java.io.StringReader
-import jdk.nashorn.internal.runtime.regexp.joni.exception.SyntaxException
 import junit.framework.TestCase
 import junit.framework.Assert._
 
@@ -101,78 +100,78 @@ class Assign2Test extends TestCase{
     assert(new Interpreter(new StringReader("let Y    := map f to \n              let g := map x to f(map z1,z2 to (x(x))(z1,z2));\n\t    in g(g);\n    APPEND := map ap to \n\t        map x,y to \n                  if x = null then y else cons(first(x), ap(rest(x), y));\n    l      := cons(1,cons(2,cons(3,null)));\t\nin (Y(APPEND))(l,l)")).needValue.toString.equals("(1 2 3 1 2 3)"))
   }
   // Test All
-  def valueCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.valueValue.toString()
+  def valueValueCheck(answer: String, program: String) = {
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.valueValue.toString
     assertEquals(answer, ge)
   }
 
-  def nameCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.nameValue.toString()
+  def nameValueCheck(answer: String, program: String) = {
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.nameValue.toString
     assertEquals(answer, ge)
   }
 
-  def needCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.needValue.toString()
+  def needValueCheck(answer: String, program: String) = {
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.needValue.toString
     assertEquals(answer, ge)
   }
 
   def valueNameCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.valueName.toString()
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.valueName.toString
     assertEquals(answer, ge)
   }
 
   def nameNameCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.nameName.toString()
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.nameName.toString
     assertEquals(answer, ge)
   }
 
   def needNameCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.needName.toString()
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.needName.toString
     assertEquals(answer, ge)
   }
 
   def valueNeedCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.valueNeed.toString()
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.valueNeed.toString
     assertEquals(answer, ge)
   }
 
   def nameNeedCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.nameNeed.toString()
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.nameNeed.toString
     assertEquals(answer, ge)
   }
 
   def needNeedCheck(answer: String, program: String) = {
-    var interp = new Interpreter(new StringReader(program))
-    var ge = interp.needNeed.toString()
+    val interp = new Interpreter(new StringReader(program))
+    val ge = interp.needNeed.toString
     assertEquals(answer, ge)
   }
-  
-  
+
+
 
   def allValueCheck(answer: String, program: String) {
-    valueCheck(answer, program);
-    nameCheck(answer, program);
-    needCheck(answer, program);
+    valueValueCheck(answer, program)
+    nameValueCheck(answer, program)
+    needValueCheck(answer, program)
   }
 
   def allNameCheck(answer: String, program: String) {
-    valueNameCheck(answer, program);
-    nameNameCheck(answer, program);
-    needNameCheck(answer, program);
+    valueNameCheck(answer, program)
+    nameNameCheck(answer, program)
+    needNameCheck(answer, program)
   }
 
   def allNeedCheck(answer: String, program: String) {
-    valueNameCheck(answer, program);
-    nameNameCheck(answer, program);
-    needNameCheck(answer, program);
+    valueNameCheck(answer, program)
+    nameNameCheck(answer, program)
+    needNameCheck(answer, program)
   }
 
   def allCheck(answer: String, program: String){
@@ -183,8 +182,8 @@ class Assign2Test extends TestCase{
 
   def testNumberP() {
     try {
-      var output = "number?";
-      var input = "number?";
+      val output = "number?"
+      val input = "number?"
       allValueCheck(output, input );
 
     } catch{
@@ -194,8 +193,8 @@ class Assign2Test extends TestCase{
 
   def testMathOP() {
     try {
-      var output = "18";
-      var input = "2 * 3 + 12";
+      val output = "18"
+      val input = "2 * 3 + 12"
       allValueCheck(output, input );
 
     } catch{
@@ -205,9 +204,9 @@ class Assign2Test extends TestCase{
 
   def testParseException() {
     try {
-      var output = "haha";
-      var input = " 1 +"
-      allValueCheck(output, input);
+      val output = "haha"
+      val input = " 1 +"
+      allValueCheck(output, input)
       fail("parseException did not throw ParseException exception");
     }catch{
       case _: Throwable =>
@@ -216,9 +215,9 @@ class Assign2Test extends TestCase{
 
   def testEvalException() {
     try {
-      var output = "mojo";
-      var input = "1 + number?"
-      allValueCheck(output, input);
+      val output = "mojo"
+      val input = "1 + number?"
+      allValueCheck(output, input)
       fail("parseException did not throw ParseException exception");
     }catch{
       case _: Throwable =>
@@ -228,9 +227,9 @@ class Assign2Test extends TestCase{
   // Test primitive functions
   def testOutputCons() {
     try {
-      var output = "(1 2)";
-      var input = "cons(1, cons(2, null))";
-      nameCheck(output, input );
+      val output = "(1 2)"
+      val input = "cons(1, cons(2, null))"
+      nameValueCheck(output, input )
 
     } catch{
       case e: Throwable => {
@@ -242,8 +241,8 @@ class Assign2Test extends TestCase{
 
   def testOutputEmpty() {
     try {
-      var output = "true";
-      var input = "null?(null)";
+      val output = "true"
+      val input = "null?(null)"
 
       allValueCheck(output, input );
     } catch{
@@ -253,8 +252,8 @@ class Assign2Test extends TestCase{
 
   def testOutputConsP() {
     try {
-      var output = "true";
-      var input = "cons?(cons(1, null))";
+      val output = "true"
+      val input = "cons?(cons(1, null))"
 
       allValueCheck(output, input );
     } catch{
@@ -264,8 +263,8 @@ class Assign2Test extends TestCase{
 
   def testOutputNumber() {
     try {
-      var output = "true";
-      var input = "number?(1)";
+      val output = "true"
+      val input = "number?(1)"
 
       allValueCheck(output, input );
     } catch{
@@ -275,8 +274,8 @@ class Assign2Test extends TestCase{
 
   def testOutputNumberLet() {
     try {
-      var output = "true";
-      var input = "let x := 1; \n in number?(x)";
+      val output = "true"
+      val input = "let x := 1; \n in number?(x)"
 
       allValueCheck(output, input );
     } catch{
@@ -286,8 +285,8 @@ class Assign2Test extends TestCase{
 
   def testOutputConPPrimLet() {
     try {
-      var output = "true";
-      var input = "let x := cons(1, null); \n in cons?(x)";
+      val output = "true"
+      val input = "let x := cons(1, null); \n in cons?(x)"
 
       allValueCheck(output, input );
     } catch{
@@ -297,8 +296,8 @@ class Assign2Test extends TestCase{
 
   def testOutputFunction() {
     try {
-      var output = "true";
-      var input = "function?(number?)";
+      val output = "true"
+      val input = "function?(number?)"
 
       allValueCheck(output, input );
     } catch{
@@ -308,8 +307,8 @@ class Assign2Test extends TestCase{
 
   def testOutputFunction1() {
     try {
-      var output = "true";
-      var input = "function?(map x to x)";
+      val output = "true"
+      val input = "function?(map x to x)"
 
       allValueCheck(output, input );
     } catch{
@@ -319,8 +318,8 @@ class Assign2Test extends TestCase{
 
   def testOutputArity() {
     try {
-      var output = "3";
-      var input = "arity(map x, y, z to x)";
+      val output = "3"
+      val input = "arity(map x, y, z to x)"
 
       allValueCheck(output, input );
     } catch{
@@ -330,8 +329,8 @@ class Assign2Test extends TestCase{
 
   def testOutputListNull() {
     try {
-      var output = "true";
-      var input = "list?(null)";
+      val output = "true"
+      val input = "list?(null)"
 
       allValueCheck(output, input );
     } catch{
@@ -341,8 +340,8 @@ class Assign2Test extends TestCase{
 
   def testOutputList() {
     try {
-      var output = "true";
-      var input = "list?(cons(1, cons(2, null)))";
+      val output = "true"
+      val input = "list?(cons(1, cons(2, null)))"
 
       allValueCheck(output, input );
     } catch{
@@ -352,8 +351,8 @@ class Assign2Test extends TestCase{
 
   def testOutputFirst() {
     try {
-      var output = "1";
-      var input = "first(cons(1, cons(2, null)))";
+      val output = "1"
+      val input = "first(cons(1, cons(2, null)))"
 
       allValueCheck(output, input );
     } catch{
@@ -363,8 +362,8 @@ class Assign2Test extends TestCase{
 
   def testOutputRest() {
     try {
-      var output = "(2)";
-      var input = "rest(cons(1, cons(2, null)))";
+      val output = "(2)"
+      val input = "rest(cons(1, cons(2, null)))"
 
       allValueCheck(output, input );
     } catch{
@@ -376,8 +375,8 @@ class Assign2Test extends TestCase{
 
   def testFailCons() {
     try {
-      var output = "false";
-      var input = "cons?(map x to 1)";
+      val output = "false"
+      val input = "cons?(map x to 1)"
 
       allValueCheck(output, input );
     } catch{
@@ -387,8 +386,8 @@ class Assign2Test extends TestCase{
 
   def testFailNull() {
     try {
-      var output = "false";
-      var input = "null?(3)";
+      val output = "false"
+      val input = "null?(3)"
 
       allValueCheck(output, input );
     } catch{
@@ -398,8 +397,8 @@ class Assign2Test extends TestCase{
 
   def testFailNumber() {
     try {
-      var output = "false";
-      var input = "number?(null)";
+      val output = "false"
+      val input = "number?(null)"
 
       allValueCheck(output, input );
     } catch{
@@ -409,8 +408,8 @@ class Assign2Test extends TestCase{
 
   def testFailFunction() {
     try {
-      var output = "false";
-      var input = "function?(null)";
+      val output = "false"
+      val input = "function?(null)"
 
       allValueCheck(output, input );
     } catch{
@@ -420,8 +419,8 @@ class Assign2Test extends TestCase{
 
   def testFaillist() {
     try {
-      var output = "false";
-      var input = "list?(map x to 1)";
+      val output = "false"
+      val input = "list?(map x to 1)"
 
       allValueCheck(output, input );
     } catch{
@@ -435,11 +434,11 @@ class Assign2Test extends TestCase{
 
   def testFreeVarValue() {
     try {
-      var output = "5";
-      var input = "let x := f; \n in 5";
+      val output = "5"
+      val input = "let x := f; \n in 5"
 
       try{
-        valueCheck(output, input)
+        valueValueCheck(output, input)
         fail("Did not throw free variable")
       } catch {
         case e: Throwable =>
@@ -451,10 +450,10 @@ class Assign2Test extends TestCase{
 
   def testFreeVarName() {
     try {
-      var output = "5";
-      var input = "let x := f; \n in 5";
+      val output = "5"
+      val input = "let x := f; \n in 5"
 
-      nameCheck(output, input)
+      nameValueCheck(output, input)
     } catch{
       case e: Throwable => fail("free variable throw for call by name");
     }
@@ -462,10 +461,10 @@ class Assign2Test extends TestCase{
 
   def testFreeVarNeed() {
     try {
-      var output = "5";
-      var input = "let x := f; \n in 5";
+      val output = "5"
+      val input = "let x := f; \n in 5"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("free variable throw for call by need");
     }
@@ -473,10 +472,10 @@ class Assign2Test extends TestCase{
 
   def testUnary() {
     try {
-      var output = "5";
-      var input = "+5";
+      val output = "5"
+      val input = "+5"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("unary throw");
     }
@@ -484,10 +483,10 @@ class Assign2Test extends TestCase{
 
   def testUnary2() {
     try {
-      var output = "-5";
-      var input = "-5";
+      val output = "-5"
+      val input = "-5"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("unary throw");
     }
@@ -495,10 +494,10 @@ class Assign2Test extends TestCase{
 
   def testUnary3() {
     try {
-      var output = "false";
-      var input = "~true";
+      val output = "false"
+      val input = "~true"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("unary throw");
     }
@@ -506,10 +505,10 @@ class Assign2Test extends TestCase{
 
   def testUnary4() {
     try {
-      var output = "true";
-      var input = "~false";
+      val output = "true"
+      val input = "~false"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("unary throw");
     }
@@ -517,10 +516,10 @@ class Assign2Test extends TestCase{
 
   def testBinary1() {
     try {
-      var output = "true";
-      var input = "5 > 3";
+      val output = "true"
+      val input = "5 > 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -528,10 +527,10 @@ class Assign2Test extends TestCase{
 
   def testBinary2() {
     try {
-      var output = "false";
-      var input = "5 < 3";
+      val output = "false"
+      val input = "5 < 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -539,10 +538,10 @@ class Assign2Test extends TestCase{
 
   def testBinary3() {
     try {
-      var output = "false";
-      var input = "5 <= 3";
+      val output = "false"
+      val input = "5 <= 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -550,10 +549,10 @@ class Assign2Test extends TestCase{
 
   def testBinary4() {
     try {
-      var output = "true";
-      var input = "2 <= 3";
+      val output = "true"
+      val input = "2 <= 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -561,10 +560,10 @@ class Assign2Test extends TestCase{
 
   def testBinary5() {
     try {
-      var output = "true";
-      var input = "2 != 3";
+      val output = "true"
+      val input = "2 != 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -572,10 +571,10 @@ class Assign2Test extends TestCase{
 
   def testBinary6() {
     try {
-      var output = "false";
-      var input = "3 != 3";
+      val output = "false"
+      val input = "3 != 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -583,10 +582,10 @@ class Assign2Test extends TestCase{
 
   def testBinary7() {
     try {
-      var output = "5";
-      var input = "2 + 3";
+      val output = "5"
+      val input = "2 + 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -594,10 +593,10 @@ class Assign2Test extends TestCase{
 
   def testBinary8() {
     try {
-      var output = "-1";
-      var input = "2 - 3";
+      val output = "-1"
+      val input = "2 - 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -605,10 +604,10 @@ class Assign2Test extends TestCase{
 
   def testBinary9() {
     try {
-      var output = "4";
-      var input = "8 / 2";
+      val output = "4"
+      val input = "8 / 2"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -616,10 +615,10 @@ class Assign2Test extends TestCase{
 
   def testBinary10() {
     try {
-      var output = "6";
-      var input = "2 * 3";
+      val output = "6"
+      val input = "2 * 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -627,10 +626,10 @@ class Assign2Test extends TestCase{
 
   def testBinary11() {
     try {
-      var output = "true";
-      var input = "3 >= 3";
+      val output = "true"
+      val input = "3 >= 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -638,10 +637,10 @@ class Assign2Test extends TestCase{
 
   def testBinary12() {
     try {
-      var output = "false";
-      var input = "2 >= 3";
+      val output = "false"
+      val input = "2 >= 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -649,10 +648,10 @@ class Assign2Test extends TestCase{
 
   def testBinary13() {
     try {
-      var output = "true";
-      var input = "true & true";
+      val output = "true"
+      val input = "true & true"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -660,10 +659,10 @@ class Assign2Test extends TestCase{
 
   def testBinary14() {
     try {
-      var output = "false";
-      var input = "false & true";
+      val output = "false"
+      val input = "false & true"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -671,10 +670,10 @@ class Assign2Test extends TestCase{
 
   def testBinary15() {
     try {
-      var output = "true";
-      var input = "false | true";
+      val output = "true"
+      val input = "false | true"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -682,10 +681,10 @@ class Assign2Test extends TestCase{
 
   def testBinary16() {
     try {
-      var output = "true";
-      var input = "true | false";
+      val output = "true"
+      val input = "true | false"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -693,10 +692,10 @@ class Assign2Test extends TestCase{
 
   def testBinary17() {
     try {
-      var output = "false";
-      var input = "true & false";
+      val output = "false"
+      val input = "true & false"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -707,8 +706,8 @@ class Assign2Test extends TestCase{
 
   def testPiazza1() {
     try {
-      var output = "6";
-      var input = "let a:=b; b:=3; in (a+b)";
+      val output = "6"
+      val input = "let a:=b; b:=3; in (a+b)"
       allValueCheck(output, input)
       fail("Did not throw for free variable");
     } catch{
@@ -718,9 +717,9 @@ class Assign2Test extends TestCase{
 
   def testBinopFV(){
     try {
-      var output = "haha";
-      var input = "x + 5"
-      allValueCheck(output, input);
+      val output = "haha"
+      val input = "x + 5"
+      allValueCheck(output, input)
       fail("Did not throw for free variable");
     }catch{
       case e: SyntaxException => print(e.getMessage + "\n")
@@ -729,19 +728,19 @@ class Assign2Test extends TestCase{
 
   def testml1() {
     try {
-      var output = "JamClosure(map x,y to (x + y),Map())";
-      var input = "(map x, y to x + y)";
+      val output = "JamClosure(map x,y to (x + y),Map())"
+      val input = "(map x, y to x + y)"
       allValueCheck(output, input)
 
     } catch{
-      case e: Throwable => fail("throw" + e.printStackTrace());
+      case e: Throwable => fail(e.getMessage);
     }
   } //end of func
 
   def testml2() {
     try {
-      var output = "JamClosure(map x,x to (x + x),Map())";
-      var input = "(map x, x to x + x)";
+      val output = "JamClosure(map x,x to (x + x),Map())"
+      val input = "(map x, x to x + x)"
       allValueCheck(output, input)
       fail("Did not throw for repeated variables");
     } catch{
@@ -751,8 +750,8 @@ class Assign2Test extends TestCase{
 
   def testlet1() {
     try {
-      var output = "2";
-      var input = "let x:=1; y := x +1; in y";
+      val output = "2"
+      val input = "let x:=1; y := x +1; in y"
       allValueCheck(output, input)
 
     } catch{
@@ -760,22 +759,10 @@ class Assign2Test extends TestCase{
     }
   } //end of func
 
-//  def testlet2() {
-//    try {
-//      var output = "2";
-//      var input = "let y := x +1; x:=1; in y";
-//      nameCheck(output, input)
-//      needCheck(output, input)
-//
-//    } catch{
-//      case e: Throwable => fail("throw" + e.printStackTrace());
-//    }
-//  } //end of func
-
   def testmapApp() {
     try {
-      var output = "3";
-      var input = "(map x, y to x + y)(1,2)";
+      val output = "3"
+      val input = "(map x, y to x + y)(1,2)"
       allValueCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
@@ -784,8 +771,8 @@ class Assign2Test extends TestCase{
 
   def testmapApp2() {
     try {
-      var output = "";
-      var input = "(map x, x to x + x)(1,3)";
+      val output = ""
+      val input = "(map x, x to x + x)(1,3)"
       allValueCheck(output, input)
       fail("Did not throw for repeated variables");
     } catch{
@@ -795,8 +782,8 @@ class Assign2Test extends TestCase{
 
   def testmapApp3() {
     try {
-      var output = "3";
-      var input = "(map x, y to x + y)(1,x+1)";
+      val output = "3"
+      val input = "(map x, y to x + y)(1,x+1)"
       allValueCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
@@ -805,8 +792,8 @@ class Assign2Test extends TestCase{
 
   def testAnd(){
     try {
-      var output = "true";
-      var input = "(3 = 3) & (4 = 4)";
+      val output = "true"
+      val input = "(3 = 3) & (4 = 4)"
       allValueCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
@@ -815,8 +802,8 @@ class Assign2Test extends TestCase{
 
   def testAnd2() {
     try {
-      var output = "";
-      var input = "(3 = 3) & 4";
+      val output = ""
+      val input = "(3 = 3) & 4"
       allValueCheck(output, input)
       fail("Did not throw for binary And without boolean");
     } catch{
@@ -826,8 +813,8 @@ class Assign2Test extends TestCase{
 
   def testOr(){
     try {
-      var output = "true";
-      var input = "(3 = 3) | x";
+      val output = "true"
+      val input = "(3 = 3) | x"
       allValueCheck(output, input)
     } catch{
       case e: Throwable => fail("throw" + e.printStackTrace());
@@ -836,8 +823,8 @@ class Assign2Test extends TestCase{
 
   def testOr2() {
     try {
-      var output = "";
-      var input = "(3 = 2) | 4";
+      val output = ""
+      val input = "(3 = 2) | 4"
       allValueCheck(output, input)
       fail("Did not throw for binary Or without boolean");
     } catch{
@@ -847,8 +834,8 @@ class Assign2Test extends TestCase{
 
 //  def testReclet() {
 //    try {
-//      var output = "true";
-//      var input = "let is_even := map x to if x = 0 then true else is_odd(x-1);\n     is_odd := map x to if x = 0 then false else is_even(x-1);\nin is_even(42)";
+//      val output = "true"
+//      val input = "let is_even := map x to if x = 0 then true else is_odd(x-1);\n     is_odd := map x to if x = 0 then false else is_even(x-1);\nin is_even(42)"
 //      allCheck(output, input)
 //    } catch {
 //      case e: Throwable => fail("throw" + e.printStackTrace());
@@ -858,8 +845,8 @@ class Assign2Test extends TestCase{
 
   def testValueCons() {
     try {
-      var output = "1";
-      var input = "first(cons(1, x))";
+      val output = "1"
+      val input = "first(cons(1, x))"
       allValueCheck(output, input)
       fail("not throw cons with free var")
     } catch{
@@ -869,8 +856,8 @@ class Assign2Test extends TestCase{
 
   def testValueCons2() {
   try {
-    var output = "1";
-    var input = "first(cons(1, cons(2, x)))";
+    val output = "1"
+    val input = "first(cons(1, cons(2, x)))"
     allValueCheck(output, input)
     fail("not throw cons with free var")
   } catch{
@@ -880,8 +867,8 @@ class Assign2Test extends TestCase{
 
   def testValueCons3() {
     try {
-      var output = "1";
-      var input = "rest(cons(1, cons(2, x)))";
+      val output = "1"
+      val input = "rest(cons(1, cons(2, x)))"
       allValueCheck(output, input)
       fail("not throw cons with free var")
     } catch{
@@ -891,8 +878,8 @@ class Assign2Test extends TestCase{
 
   def testValueCons4() {
   try {
-    var output = "1";
-    var input = "rest(cons(1, x))";
+    val output = "1"
+    val input = "rest(cons(1, x))"
     allValueCheck(output, input)
     fail("not throw cons with free var")
   } catch{
@@ -902,8 +889,8 @@ class Assign2Test extends TestCase{
 
   def testNameCons() {
     try {
-      var output = "1";
-      var input = "first(cons(1, x))";
+      val output = "1"
+      val input = "first(cons(1, x))"
       allNameCheck(output, input)
     } catch{
       case e: Throwable => fail(e.getMessage)
@@ -912,8 +899,8 @@ class Assign2Test extends TestCase{
 
   def testNameCons2() {
     try {
-      var output = "1";
-      var input = "rest(cons(1, x))";
+      val output = "1"
+      val input = "rest(cons(1, x))"
       allNameCheck(output, input)
       fail("not throw cons with free var")
     } catch{
@@ -923,8 +910,8 @@ class Assign2Test extends TestCase{
 
   def testNeedCons() {
     try {
-      var output = "1";
-      var input = "first(cons(1, x))";
+      val output = "1"
+      val input = "first(cons(1, x))"
       allNeedCheck(output, input)
     } catch{
       case e: Throwable => fail(e.getMessage)
@@ -933,8 +920,8 @@ class Assign2Test extends TestCase{
 
   def testNeedCons2() {
     try {
-      var output = "1";
-      var input = "rest(cons(1, x))";
+      val output = "1"
+      val input = "rest(cons(1, x))"
       allNeedCheck(output, input)
       fail("not throw cons with free var")
     } catch{
@@ -944,8 +931,8 @@ class Assign2Test extends TestCase{
 
   def testCons2() {
     try {
-      var output = "2";
-      var input = "first(rest(cons(1, cons(2, x))))";
+      val output = "2"
+      val input = "first(rest(cons(1, cons(2, x))))"
       allNeedCheck(output, input)
     } catch{
       case e: Throwable => fail(e.getMessage)
@@ -954,8 +941,8 @@ class Assign2Test extends TestCase{
 
   def testCons3() {
     try {
-      var output = "2";
-      var input = "first(rest(cons(1, cons(2, x))))";
+      val output = "2"
+      val input = "first(rest(cons(1, cons(2, x))))"
       allNameCheck(output, input)
     } catch{
       case e: Throwable => fail(e.getMessage)
@@ -964,12 +951,42 @@ class Assign2Test extends TestCase{
 
   def testCons4() {
     try {
-      var output = "2";
-      var input = "first(rest(cons(1, cons(2, x))))";
+      val output = "2"
+      val input = "first(rest(cons(1, cons(2, x))))"
       allValueCheck(output, input)
       fail("not throw cons with free var")
     } catch{
       case e: Throwable => print(e.getMessage + "\n")
     }
   } //end of func
+
+  def testRecursive(): Unit = {
+    try {
+      val output = "true"
+      val input = "let is_even := map x to if x = 0 then true else is_odd(x-1);\n     is_odd := map x to if x = 0 then false else is_even(x-1);\nin is_even(42)"
+      nameValueCheck(output, input)
+      nameNameCheck(output, input)
+      nameNeedCheck(output, input)
+      needValueCheck(output, input)
+      needNameCheck(output, input)
+      needNeedCheck(output, input)
+    } catch {
+      case e: Throwable => fail(e.getMessage)
+    }
+  }
+
+    def testlet3() {
+      try {
+        val output = "2"
+        val input = "let y := x +1; x:=1; in y"
+        nameValueCheck(output, input)
+        nameNameCheck(output, input)
+        nameNeedCheck(output, input)
+        needValueCheck(output, input)
+        needNameCheck(output, input)
+        needNeedCheck(output, input)
+      } catch{
+        case e: Throwable => fail("throw" + e.printStackTrace());
+      }
+    } //end of func
 }
