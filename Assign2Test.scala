@@ -976,7 +976,12 @@ class Assign2Test extends TestCase{
     try {
       val output = "true"
       val input = "let is_even := map x to if x = 0 then true else is_odd(x-1);\n     is_odd := map x to if x = 0 then false else is_even(x-1);\nin is_even(42)"
-      valueValueCheck(output, input)
+      nameValueCheck(output, input)
+      nameNameCheck(output, input)
+      nameNeedCheck(output, input)
+      needValueCheck(output, input)
+      needNameCheck(output, input)
+      needNeedCheck(output, input)
     } catch {
       case e: Throwable => fail(e.getMessage)
     }

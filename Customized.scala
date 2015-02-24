@@ -12,6 +12,7 @@ trait Env[Tp] {
   def get(s: Symbol): Tp
   def + (pair: (Symbol, Tp)): Env[Tp]
   def contains(s: Symbol): Boolean
+  def getMap: Map[Symbol, Tp]
 }
 
 class ConcreteEnv[Tp](val map: Map[Symbol, Tp]) extends Env[Tp] {
@@ -19,6 +20,7 @@ class ConcreteEnv[Tp](val map: Map[Symbol, Tp]) extends Env[Tp] {
   def get(s: Symbol): Tp = map(s)
   def + (pair: (Symbol, Tp)): Env[Tp] = new ConcreteEnv[Tp](map + pair)
   def contains(s: Symbol): Boolean = map.contains(s)
+  def getMap: Map[Symbol, Tp] = map
 }
 
 class ProxyEnv[Tp] extends Env[Tp] {
@@ -35,6 +37,10 @@ class ProxyEnv[Tp] extends Env[Tp] {
   def contains(s: Symbol): Boolean = map match {
     case Some(ma) => ma.contains(s)
     case None => throw new UnsupportedOperationException("ProxyEnv.contains called before map is set")
+  }
+  def getMap: Map[Symbol, Tp] = map match {
+    case Some(ma) => ma
+    case None => throw new UnsupportedOperationException("ProxyEnv.getMap called before map is set")
   }
 }
 

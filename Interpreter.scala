@@ -4,18 +4,51 @@ class Interpreter(reader: java.io.Reader) {
 
   val ast: AST = new Parser(reader).parse()
 
+//  private def bindRecLetValue(e: Env[ValueTuple], defs: Array[Def], evaluate: (AST, Env[ValueTuple]) => JamVal, untilNotVariable: (AST, Env[ValueTuple]) => AST) = {
+//    var newMap = e
+//    var proxyList = List[Env[ValueTuple]]()
+//    defs.foreach(d => {
+//      val thisProxy = new ProxyEnv[ValueTuple]
+//      newMap += (d.lhs.sym, new ValueTuple(evaluate, untilNotVariable, thisProxy, d.rhs))
+//      proxyList = thisProxy :: proxyList
+//    })
+//    // Set new map to the proxy
+//    proxyList.foreach(proxy => proxy.setMap(newMap.getMap))
+//    newMap
+//  }
+  private def bindRecLetName(e: Env[NameTuple], defs: Array[Def], evaluate: (AST, Env[NameTuple]) => JamVal, untilNotVariable: (AST, Env[NameTuple]) => AST) = {
+      var newMap = e
+      var proxyList = List[Env[NameTuple]]()
+      defs.foreach(d => {
+        val thisProxy = new ProxyEnv[NameTuple]
+        newMap += (d.lhs.sym, new NameTuple(evaluate, untilNotVariable, thisProxy, d.rhs))
+        proxyList = thisProxy :: proxyList
+      })
+      // Set new map to the proxy
+      proxyList.foreach(proxy => proxy.setMap(newMap.getMap))
+      newMap
+  }
+  private def bindRecLetNeed(e: Env[NeedTuple], defs: Array[Def], evaluate: (AST, Env[NeedTuple]) => JamVal, untilNotVariable: (AST, Env[NeedTuple]) => AST) = {
+    var newMap = e
+    var proxyList = List[Env[NeedTuple]]()
+    defs.foreach(d => {
+      val thisProxy = new ProxyEnv[NeedTuple]
+      newMap += (d.lhs.sym, new NeedTuple(evaluate, untilNotVariable, thisProxy, d.rhs))
+      proxyList = thisProxy :: proxyList
+    })
+    // Set new map to the proxy
+    proxyList.foreach(proxy => proxy.setMap(newMap.getMap))
+    newMap
+  }
+
   private def makeConsValue[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal =
   evaluate(arg1, e) match {
     case EmptyConstant => new JamListNEValue(first, EmptyConstant)
     case j: JamListNEValue => new JamListNEValue(first, j)
     case _ => throw new EvalException("The rest of cons is not of a valid type")
   }
-
-  private def makeConsName[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal =
-    new JamListNEName(first, evaluate, arg1, e)
-
-  private def makeConsNeed[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal =
-    new JamListNENeed(first, evaluate, arg1, e)
+  private def makeConsName[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal = new JamListNEName(first, evaluate, arg1, e)
+  private def makeConsNeed[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal = new JamListNENeed(first, evaluate, arg1, e)
 
   def valueValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
     (e, defs, evaluate, untilNotVariable) => {
@@ -26,6 +59,7 @@ class Interpreter(reader: java.io.Reader) {
       })
       newMap
     },
+//    bindRecLetValue,
     (en, e, vars, args, evaluate, untilNotVariable) => {
       var newMap = en
       var newMap2 = e
@@ -41,14 +75,7 @@ class Interpreter(reader: java.io.Reader) {
   )
 
   def nameValue: JamVal = callGeneral[NameTuple, JamListNEValue](
-    (e, defs, evaluate, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NameTuple(evaluate, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
+    bindRecLetName,
     (en, e, vars, args, evaluate, untilNotVariable) => {
       var newMap = en
       var newMap2 = e
@@ -64,14 +91,7 @@ class Interpreter(reader: java.io.Reader) {
   )
 
   def needValue: JamVal = callGeneral[NeedTuple, JamListNEValue](
-    (e, defs, evaluate, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NeedTuple(evaluate, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
+    bindRecLetNeed,
     (en, e, vars, args, evaluate, untilNotVariable) => {
       var newMap = en
       var newMap2 = e
@@ -110,14 +130,7 @@ class Interpreter(reader: java.io.Reader) {
   )
 
   def nameName: JamVal = callGeneral[NameTuple, JamListNEName[NameTuple]](
-    (e, defs, evaluate, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NameTuple(evaluate, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
+    bindRecLetName,
     (en, e, vars, args, evaluate, untilNotVariable) => {
       var newMap = en
       var newMap2 = e
@@ -133,14 +146,7 @@ class Interpreter(reader: java.io.Reader) {
   )
 
   def needName: JamVal = callGeneral[NeedTuple, JamListNEName[NeedTuple]](
-    (e, defs, evaluate, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NeedTuple(evaluate, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
+    bindRecLetNeed,
     (en, e, vars, args, evaluate, untilNotVariable) => {
       var newMap = en
       var newMap2 = e
@@ -179,14 +185,7 @@ class Interpreter(reader: java.io.Reader) {
   )
 
   def nameNeed: JamVal = callGeneral[NameTuple, JamListNENeed[NameTuple]](
-    (e, defs, evaluate, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NameTuple(evaluate, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
+    bindRecLetName,
     (en, e, vars, args, evaluate, untilNotVariable) => {
       var newMap = en
       var newMap2 = e
@@ -202,14 +201,7 @@ class Interpreter(reader: java.io.Reader) {
   )
 
   def needNeed: JamVal = callGeneral[NeedTuple, JamListNENeed[NeedTuple]](
-    (e, defs, evaluate, untilNotVariable) => {
-      var newMap = e
-      defs.foreach(d => {
-        var pair = (d.lhs.sym, new NeedTuple(evaluate, untilNotVariable, newMap, d.rhs))
-        newMap += pair
-      })
-      newMap
-    },
+    bindRecLetNeed,
     (en, e, vars, args, evaluate, untilNotVariable) => {
       var newMap = en
       var newMap2 = e
