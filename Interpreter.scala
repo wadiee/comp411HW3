@@ -4,17 +4,17 @@ class Interpreter(reader: java.io.Reader) {
 
   val ast: AST = new Parser(reader).parse()
 
-  private def makeConsValue[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+  private def makeConsValue[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal =
   evaluate(arg1, e) match {
     case EmptyConstant => new JamListNEValue(first, EmptyConstant)
     case j: JamListNEValue => new JamListNEValue(first, j)
     case _ => throw new EvalException("The rest of cons is not of a valid type")
   }
 
-  private def makeConsName[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+  private def makeConsName[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal =
     new JamListNEName(first, evaluate, arg1, e)
 
-  private def makeConsNeed[Tp](first: JamVal, evaluate: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]): JamVal =
+  private def makeConsNeed[Tp](first: JamVal, evaluate: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]): JamVal =
     new JamListNENeed(first, evaluate, arg1, e)
 
   def valueValue: JamVal = callGeneral[ValueTuple, JamListNEValue](
@@ -225,33 +225,33 @@ class Interpreter(reader: java.io.Reader) {
   )
 
   private def callGeneral[Tp <: Tuple, Cons <: JamList](
-                                        letBinding: (Map[Symbol, Tp], Array[Def], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
-                                        appMapBinding: (Map[Symbol, Tp], Map[Symbol, Tp], Array[Variable], Array[AST], (AST, Map[Symbol, Tp]) => JamVal, (AST, Map[Symbol, Tp]) => AST) => Map[Symbol, Tp],
-                                        makeCons: (JamVal, (AST, Map[Symbol, Tp]) => JamVal, AST, Map[Symbol, Tp]) => JamVal
+                                        letBinding: (Env[Tp], Array[Def], (AST, Env[Tp]) => JamVal, (AST, Env[Tp]) => AST) => Env[Tp],
+                                        appMapBinding: (Env[Tp], Env[Tp], Array[Variable], Array[AST], (AST, Env[Tp]) => JamVal, (AST, Env[Tp]) => AST) => Env[Tp],
+                                        makeCons: (JamVal, (AST, Env[Tp]) => JamVal, AST, Env[Tp]) => JamVal
                                         ): JamVal = {
-    def binIntOp(e: Map[Symbol, Tp], arg1: AST, arg2: AST, op: (Int, Int) => Int, exceptionContent: String) = (evaluate(arg1, e), evaluate(arg2, e)) match {
+    def binIntOp(e: Env[Tp], arg1: AST, arg2: AST, op: (Int, Int) => Int, exceptionContent: String) = (evaluate(arg1, e), evaluate(arg2, e)) match {
       case (IntConstant(value1: Int), IntConstant(value2: Int)) => IntConstant(op(value1, value2))
       case _ => throw new EvalException(exceptionContent)
     }
-    def binIntCmpOp(e: Map[Symbol, Tp], arg1: AST, arg2: AST, op: (Int, Int) => Boolean, exceptionContent: String) = (evaluate(arg1, e), evaluate(arg2, e)) match {
+    def binIntCmpOp(e: Env[Tp], arg1: AST, arg2: AST, op: (Int, Int) => Boolean, exceptionContent: String) = (evaluate(arg1, e), evaluate(arg2, e)) match {
       case (IntConstant(value1: Int), IntConstant(value2: Int)) => op(value1, value2) match {
         case true => True
         case false => False
       }
       case _ => throw new EvalException(exceptionContent)
     }
-    def UnIntOp(e: Map[Symbol, Tp], arg: AST, op: Int => Int, exceptionContent: String) = evaluate(arg, e) match {
+    def UnIntOp(e: Env[Tp], arg: AST, op: Int => Int, exceptionContent: String) = evaluate(arg, e) match {
       case (IntConstant(value: Int)) => IntConstant(op(value))
       case _ => throw new EvalException(exceptionContent)
     }
-    def untilNotVariable(input: AST, e: Map[Symbol, Tp]): AST = {
+    def untilNotVariable(input: AST, e: Env[Tp]): AST = {
       input match {
-        case vv: Variable => untilNotVariable(e(vv.sym).getAST, e)
+        case vv: Variable => untilNotVariable(e.get(vv.sym).getAST, e)
         case _ => input
       }
     }
 
-    def evaluate(ast: AST, e: Map[Symbol, Tp]): JamVal = ast match {
+    def evaluate(ast: AST, e: Env[Tp]): JamVal = ast match {
       case BinOpApp(binOpPlus: BinOp, arg1: AST, arg2: AST) => binOpPlus match {
         case BinOpPlus => binIntOp(e, arg1, arg2, _ + _, "BinOpPlus not with int")
         case BinOpMinus => binIntOp(e, arg1, arg2, _ - _, "BinOpMinus not with int")
@@ -314,7 +314,7 @@ class Interpreter(reader: java.io.Reader) {
       case b: BoolConstant => b
       case i: IntConstant => i
 
-      case Variable(sym: Symbol) => if (e.contains(sym)) e(sym).getJamVal else throw new SyntaxException(sym + " is a free variable!")
+      case Variable(sym: Symbol) => if (e.contains(sym)) e.get(sym).getJamVal else throw new SyntaxException(sym + " is a free variable!")
 
       case UnOpApp(rator: UnOp, arg: AST) => rator match {
         case UnOpPlus =>  UnIntOp(e, arg, + _, "unary plus without int")
@@ -370,7 +370,7 @@ class Interpreter(reader: java.io.Reader) {
         case ArityPrim =>
           if (args.length != 1) throw new EvalException("Should have one arguments")
           evaluate(args(0), e) match {
-            case JamClosure(body: MapLiteral, env: Map[Symbol, Tp]) => IntConstant(body.vars.length)
+            case JamClosure(body: MapLiteral, env: Env[Tp]) => IntConstant(body.vars.length)
             case ConsPrim => IntConstant(2)
             case _: PrimFun => IntConstant(1)
             case _ => throw new EvalException("arg0 is not a function")
@@ -396,7 +396,7 @@ class Interpreter(reader: java.io.Reader) {
             case _ => throw new EvalException("arg0 is not a jam list, it is a " + args(0).getClass)
           }
 
-        case JamClosure(MapLiteral(vars, body), en: Map[Symbol, Tp]) =>
+        case JamClosure(MapLiteral(vars, body), en: Env[Tp]) =>
           // Bind
           if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
           val repeatedMap = vars.groupBy(l => l).map(p => (p._1, p._2.length)).filter(p => p._2 > 1)
@@ -407,6 +407,6 @@ class Interpreter(reader: java.io.Reader) {
       }
       case pf: PrimFun => pf
     }
-    evaluate(ast, Map())
+    evaluate(ast, new ConcreteEnv[Tp](Map[Symbol, Tp]()))
   }
 }

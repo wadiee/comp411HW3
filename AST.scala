@@ -32,12 +32,22 @@ sealed trait JamVal {
   def force:JamVal = this
 }
 
-//case class JamList(list: List[JamVal]) extends JamVal {
-//case class JamList(Jam) extends JamVal {
-//  def first = list.head
-//  def rest = JamList(list.tail)
-//  override def toString = list.toString
-//}
+object JamListUtil {
+  def toScalaList[T](jamList: JamList, helper: (AST, Env[T]) => JamVal): List[JamVal] = jamList match {
+    case EmptyConstant => Nil
+    case JamListNEName(first, _, arg1, env: Env[T]) => helper(arg1, env)  match {
+      case EmptyConstant => first :: Nil
+      case j: JamListNEName[T] => first :: toScalaList[T](j, helper)
+      case _ => throw new EvalException("Name: the type of rest is not a jamlist")
+    }
+    case JamListNENeed(first, _, arg1, env: Env[T]) => helper(arg1, env) match {
+      case EmptyConstant => first :: Nil
+      case j: JamListNEName[T] => first :: toScalaList[T](j, helper)
+      case _ => throw new EvalException("Need: the type of rest is not a jamlist")
+    }
+  }
+}
+
 trait JamList extends JamVal{
   def getFirst: JamVal
   def getRest: JamList
@@ -51,30 +61,20 @@ case class JamListNEValue(first: JamVal, rest: JamList) extends JamList {
     case JamListNEValue(first, rest) => first :: jamListToList(rest)
     case _ => throw new EvalException("Name: the type Jamlist not a JamlistNEValue")
   }
-  var listme = jamListToList(this)
-
   override def toString = jamListToList(this).mkString("(", " ", ")")
 }
 
-case class JamListNEName[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]) extends JamList {
+case class JamListNEName[Tp](first: JamVal, helper: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]) extends JamList {
   override def getFirst = first
   override def getRest = helper(arg1, e) match {
     case EmptyConstant => EmptyConstant
     case j: JamListNEName[Tp] => j
     case _ => throw new EvalException("Name: the type of rest is not a jamlist")
   }
-  private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
-    case EmptyConstant => Nil
-    case JamListNEName(firstt, _, arg11, env: Map[Symbol, Tp]) => helper(arg11, env)  match {
-      case EmptyConstant => firstt :: Nil
-      case j: JamListNEName[Tp] => firstt :: jamListToList(j)
-      case _ => throw new EvalException("Name: the type of rest is not a jamlist")
-    }
-  }
-  override def toString = jamListToList(this).mkString("(", " ", ")")
+  override def toString = JamListUtil.toScalaList[Tp](this, helper).mkString("(", " ", ")")
 }
 
-case class JamListNENeed[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => JamVal, arg1: AST, e: Map[Symbol, Tp]) extends JamList {
+case class JamListNENeed[Tp](first: JamVal, helper: (AST, Env[Tp]) => JamVal, arg1: AST, e: Env[Tp]) extends JamList {
   lazy val restlazy : JamList = helper(arg1, e) match{
     case EmptyConstant => EmptyConstant
     case j: JamListNENeed[Tp] => j
@@ -82,16 +82,7 @@ case class JamListNENeed[Tp](first: JamVal, helper: (AST, Map[Symbol, Tp]) => Ja
   }
   override def getFirst = first
   override def getRest = restlazy
-
-  private def jamListToList(jamList: JamList): List[JamVal] = jamList match {
-    case EmptyConstant => Nil
-    case JamListNENeed(firstt, _, arg11, env: Map[Symbol, Tp]) => helper(arg11, env) match {
-      case EmptyConstant => firstt :: Nil
-      case j: JamListNEName[Tp] => firstt :: jamListToList(j)
-      case _ => throw new EvalException("Need: the type of rest is not a jamlist")
-    }
-  }
-  override def toString = jamListToList(this).mkString("(", " ", ")")
+  override def toString = JamListUtil.toScalaList[Tp](this, helper).mkString("(", " ", ")")
 }
 
 /** Jam term AST type */
@@ -145,14 +136,14 @@ sealed trait JamFun extends JamVal
 //}
 
 /** An environment trait required to define JamClosure below. V is the type of bound values. */
-trait Env {
-  /** returns the value bound to s in this */
-  def get(s: Symbol): ValueTuple
-  /** returns a new environment containing the bindings in this augmented by (s -> v) */
-  def add(p: Pair[Symbol,ValueTuple]): Env
-}
+//trait Env {
+//  /** returns the value bound to s in this */
+//  def get(s: Symbol): ValueTuple
+//  /** returns a new environment containing the bindings in this augmented by (s -> v) */
+//  def add(p: Pair[Symbol,ValueTuple]): Env
+//}
 /** A Jam closure */
-case class JamClosure[Tup](body: MapLiteral, env: Map[Symbol, Tup]) extends JamFun {
+case class JamClosure[Tup](body: MapLiteral, env: Env[Tup]) extends JamFun {
   /**
    * Use default implementations (inherited from java.lang.Object) for
    * equals and hashCode. Closures should not use the default structural

@@ -1,5 +1,4 @@
 import java.io.StringReader
-import jdk.nashorn.internal.runtime.regexp.joni.exception.SyntaxException
 import junit.framework.TestCase
 import junit.framework.Assert._
 
@@ -101,19 +100,19 @@ class Assign2Test extends TestCase{
     assert(new Interpreter(new StringReader("let Y    := map f to \n              let g := map x to f(map z1,z2 to (x(x))(z1,z2));\n\t    in g(g);\n    APPEND := map ap to \n\t        map x,y to \n                  if x = null then y else cons(first(x), ap(rest(x), y));\n    l      := cons(1,cons(2,cons(3,null)));\t\nin (Y(APPEND))(l,l)")).needValue.toString.equals("(1 2 3 1 2 3)"))
   }
   // Test All
-  def valueCheck(answer: String, program: String) = {
+  def valueValueCheck(answer: String, program: String) = {
     val interp = new Interpreter(new StringReader(program))
     val ge = interp.valueValue.toString
     assertEquals(answer, ge)
   }
 
-  def nameCheck(answer: String, program: String) = {
+  def nameValueCheck(answer: String, program: String) = {
     val interp = new Interpreter(new StringReader(program))
     val ge = interp.nameValue.toString
     assertEquals(answer, ge)
   }
 
-  def needCheck(answer: String, program: String) = {
+  def needValueCheck(answer: String, program: String) = {
     val interp = new Interpreter(new StringReader(program))
     val ge = interp.needValue.toString
     assertEquals(answer, ge)
@@ -158,9 +157,9 @@ class Assign2Test extends TestCase{
 
 
   def allValueCheck(answer: String, program: String) {
-    valueCheck(answer, program)
-    nameCheck(answer, program)
-    needCheck(answer, program)
+    valueValueCheck(answer, program)
+    nameValueCheck(answer, program)
+    needValueCheck(answer, program)
   }
 
   def allNameCheck(answer: String, program: String) {
@@ -230,7 +229,7 @@ class Assign2Test extends TestCase{
     try {
       val output = "(1 2)"
       val input = "cons(1, cons(2, null))"
-      nameCheck(output, input )
+      nameValueCheck(output, input )
 
     } catch{
       case e: Throwable => {
@@ -439,7 +438,7 @@ class Assign2Test extends TestCase{
       val input = "let x := f; \n in 5"
 
       try{
-        valueCheck(output, input)
+        valueValueCheck(output, input)
         fail("Did not throw free variable")
       } catch {
         case e: Throwable =>
@@ -454,7 +453,7 @@ class Assign2Test extends TestCase{
       val output = "5"
       val input = "let x := f; \n in 5"
 
-      nameCheck(output, input)
+      nameValueCheck(output, input)
     } catch{
       case e: Throwable => fail("free variable throw for call by name");
     }
@@ -465,7 +464,7 @@ class Assign2Test extends TestCase{
       val output = "5"
       val input = "let x := f; \n in 5"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("free variable throw for call by need");
     }
@@ -476,7 +475,7 @@ class Assign2Test extends TestCase{
       val output = "5"
       val input = "+5"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("unary throw");
     }
@@ -487,7 +486,7 @@ class Assign2Test extends TestCase{
       val output = "-5"
       val input = "-5"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("unary throw");
     }
@@ -498,7 +497,7 @@ class Assign2Test extends TestCase{
       val output = "false"
       val input = "~true"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("unary throw");
     }
@@ -509,7 +508,7 @@ class Assign2Test extends TestCase{
       val output = "true"
       val input = "~false"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("unary throw");
     }
@@ -520,7 +519,7 @@ class Assign2Test extends TestCase{
       val output = "true"
       val input = "5 > 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -531,7 +530,7 @@ class Assign2Test extends TestCase{
       val output = "false"
       val input = "5 < 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -542,7 +541,7 @@ class Assign2Test extends TestCase{
       val output = "false"
       val input = "5 <= 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -553,7 +552,7 @@ class Assign2Test extends TestCase{
       val output = "true"
       val input = "2 <= 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -564,7 +563,7 @@ class Assign2Test extends TestCase{
       val output = "true"
       val input = "2 != 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -575,7 +574,7 @@ class Assign2Test extends TestCase{
       val output = "false"
       val input = "3 != 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -586,7 +585,7 @@ class Assign2Test extends TestCase{
       val output = "5"
       val input = "2 + 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -597,7 +596,7 @@ class Assign2Test extends TestCase{
       val output = "-1"
       val input = "2 - 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -608,7 +607,7 @@ class Assign2Test extends TestCase{
       val output = "4"
       val input = "8 / 2"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -619,7 +618,7 @@ class Assign2Test extends TestCase{
       val output = "6"
       val input = "2 * 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -630,7 +629,7 @@ class Assign2Test extends TestCase{
       val output = "true"
       val input = "3 >= 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -641,7 +640,7 @@ class Assign2Test extends TestCase{
       val output = "false"
       val input = "2 >= 3"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -652,7 +651,7 @@ class Assign2Test extends TestCase{
       val output = "true"
       val input = "true & true"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -663,7 +662,7 @@ class Assign2Test extends TestCase{
       val output = "false"
       val input = "false & true"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -674,7 +673,7 @@ class Assign2Test extends TestCase{
       val output = "true"
       val input = "false | true"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -685,7 +684,7 @@ class Assign2Test extends TestCase{
       val output = "true"
       val input = "true | false"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -696,7 +695,7 @@ class Assign2Test extends TestCase{
       val output = "false"
       val input = "true & false"
 
-      needCheck(output, input)
+      needValueCheck(output, input)
     } catch{
       case e: Throwable => fail("Binary throw");
     }
@@ -734,7 +733,7 @@ class Assign2Test extends TestCase{
       allValueCheck(output, input)
 
     } catch{
-      case e: Throwable => fail("throw" + e.printStackTrace());
+      case e: Throwable => fail(e.getMessage);
     }
   } //end of func
 
@@ -977,7 +976,7 @@ class Assign2Test extends TestCase{
     try {
       val output = "true"
       val input = "let is_even := map x to if x = 0 then true else is_odd(x-1);\n     is_odd := map x to if x = 0 then false else is_even(x-1);\nin is_even(42)"
-      valueCheck(output, input)
+      valueValueCheck(output, input)
     } catch {
       case e: Throwable => fail(e.getMessage)
     }
