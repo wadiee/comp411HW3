@@ -43,13 +43,14 @@ class Interpreter(reader: java.io.Reader) {
   }
 
   private def bindAppMapValue(en: Env[ValueTuple], e: Env[ValueTuple], vars: Array[Variable], args: Array[AST], evaluate: (AST, Env[ValueTuple]) => JamVal, untilNotVariable: (AST, Env[ValueTuple]) => AST) = {
-      var newMap = en
-      var newMap2 = e
+//      var newMap = en
+//      var newMap2 = e
+    var newMap: Env[ValueTuple] = new ConcreteEnv[ValueTuple](en.getMap ++ e.getMap)
       if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
       vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new ValueTuple(evaluate, untilNotVariable, newMap2, p._2))
+        var pair = (p._1.sym, new ValueTuple(evaluate, untilNotVariable, newMap, p._2))
         newMap += pair
-        newMap2 += pair
+//        newMap2 += pair
       })
       newMap
   }

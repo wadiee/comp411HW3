@@ -169,9 +169,9 @@ class Assign2Test extends TestCase{
   }
 
   def allNeedCheck(answer: String, program: String) {
-    valueNameCheck(answer, program)
-    nameNameCheck(answer, program)
-    needNameCheck(answer, program)
+    valueNeedCheck(answer, program)
+    nameNeedCheck(answer, program)
+    needNeedCheck(answer, program)
   }
 
   def allCheck(answer: String, program: String){
@@ -970,7 +970,7 @@ class Assign2Test extends TestCase{
 //      needValueCheck(output, input)
 //      needNameCheck(output, input)
 //      needNeedCheck(output, input)
-      allCheck(output, input)
+      valueValueCheck(output, input)
     } catch {
       case e: Throwable => fail(e.getMessage)
     }
@@ -1023,4 +1023,29 @@ class Assign2Test extends TestCase{
       case e: SyntaxException => e.printStackTrace()
     }
   }
+
+  def testNumberPP() {
+    try {
+      val output = "number?"
+      val input = "number?"
+      allCheck(output, input )
+
+    } catch {
+      case e: Throwable => e.printStackTrace()
+      fail("numberP threw " + e)
+    }
+  } //end of func
+
+  def testLazyCons() {
+    try {
+      val output = "0"
+      val input = "let zeroes := cons(0,zeroes);in first(rest(zeroes))"
+      allNeedCheck(output, input)
+
+    } catch {
+      case e: Throwable => e.printStackTrace()
+        fail("LazyCons threw " + e)
+    }
+  } //end of func
+
 }
