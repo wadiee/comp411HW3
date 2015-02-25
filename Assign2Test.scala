@@ -726,16 +726,16 @@ class Assign2Test extends TestCase{
     }
   }
 
-  def testml1() {
-    try {
-      val output = "JamClosure(map x,y to (x + y),Map())"
-      val input = "(map x, y to x + y)"
-      allValueCheck(output, input)
-
-    } catch{
-      case e: Throwable => fail(e.getMessage);
-    }
-  } //end of func
+//  def testml1() {
+//    try {
+//      val output = "JamClosure(map x,y to (x + y),Map())"
+//      val input = "(map x, y to x + y)"
+//      allValueCheck(output, input)
+//
+//    } catch{
+//      case e: Throwable => fail(e.getMessage);
+//    }
+//  } //end of func
 
   def testml2() {
     try {
@@ -964,12 +964,13 @@ class Assign2Test extends TestCase{
     try {
       val output = "true"
       val input = "let is_even := map x to if x = 0 then true else is_odd(x-1);\n     is_odd := map x to if x = 0 then false else is_even(x-1);\nin is_even(42)"
-      nameValueCheck(output, input)
-      nameNameCheck(output, input)
-      nameNeedCheck(output, input)
-      needValueCheck(output, input)
-      needNameCheck(output, input)
-      needNeedCheck(output, input)
+//      nameValueCheck(output, input)
+//      nameNameCheck(output, input)
+//      nameNeedCheck(output, input)
+//      needValueCheck(output, input)
+//      needNameCheck(output, input)
+//      needNeedCheck(output, input)
+      allCheck(output, input)
     } catch {
       case e: Throwable => fail(e.getMessage)
     }
@@ -989,4 +990,37 @@ class Assign2Test extends TestCase{
         case e: Throwable => fail("throw" + e.printStackTrace());
       }
     } //end of func
+
+  def testlet4(): Unit ={
+    try {
+      val output = "2"
+      val input = "let y := x +1; x:=1; in y"
+      valueValueCheck(output, input)
+      fail("let y := x +1; x:=1; in y did not throw for value value")
+    } catch{
+      case e: SyntaxException => e.printStackTrace()
+    }
+  }
+
+  def testlet5(): Unit ={
+    try {
+      val output = "2"
+      val input = "let y := x +1; x:=1; in y"
+      valueNameCheck(output, input)
+      fail("let y := x +1; x:=1; in y did not throw for value name")
+    } catch{
+      case e: SyntaxException => e.printStackTrace()
+    }
+  }
+
+  def testlet6(): Unit ={
+    try {
+      val output = "2"
+      val input = "let y := x +1; x:=1; in y"
+      valueNeedCheck(output, input)
+      fail("let y := x +1; x:=1; in y did not throw for value need")
+    } catch{
+      case e: SyntaxException => e.printStackTrace()
+    }
+  }
 }

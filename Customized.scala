@@ -52,7 +52,10 @@ trait Tuple {
   def getAST: AST
 }
 
-class ValueTuple(jamVal: JamVal, ast: AST) extends Tuple{
+class ValueTuple(evaluate: (AST, Env[ValueTuple]) => JamVal, notUntil: (AST, Env[ValueTuple]) => AST, env: Env[ValueTuple], rawVar: AST) extends Tuple{
+  val jamVal = evaluate(rawVar, env)
+  val ast = notUntil(rawVar, env)
+  val x = 1
   override def getJamVal: JamVal = jamVal
   override def getAST: AST = ast
 }

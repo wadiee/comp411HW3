@@ -4,6 +4,19 @@ class Interpreter(reader: java.io.Reader) {
 
   val ast: AST = new Parser(reader).parse()
 
+  private def bindRecLetValue(e: Env[ValueTuple], defs: Array[Def], evaluate: (AST, Env[ValueTuple]) => JamVal, untilNotVariable: (AST, Env[ValueTuple]) => AST) = {
+    var newMap = e
+    var proxyList = List[Env[ValueTuple]]()
+    defs.foreach(d => {
+      val thisProxy = new ProxyEnv[ValueTuple]
+      newMap += (d.lhs.sym, new ValueTuple(evaluate, untilNotVariable, thisProxy, d.rhs))
+      proxyList = thisProxy :: proxyList
+    })
+    // Set new map to the proxy
+    proxyList.foreach(proxy => proxy.setMap(newMap.getMap))
+    newMap
+  }
+
   private def bindRecLetName(e: Env[NameTuple], defs: Array[Def], evaluate: (AST, Env[NameTuple]) => JamVal, untilNotVariable: (AST, Env[NameTuple]) => AST) = {
       var newMap = e
       var proxyList = List[Env[NameTuple]]()
@@ -34,7 +47,7 @@ class Interpreter(reader: java.io.Reader) {
       var newMap2 = e
       if (vars.length != args.length) throw new EvalException("The length of vars and args are not the same")
       vars.zip(args).foreach(p => {
-        var pair = (p._1.sym, new ValueTuple(evaluate(p._2, newMap2), untilNotVariable(p._2, newMap2)))
+        var pair = (p._1.sym, new ValueTuple(evaluate, untilNotVariable, newMap2, p._2))
         newMap += pair
         newMap2 += pair
       })
@@ -76,7 +89,7 @@ class Interpreter(reader: java.io.Reader) {
     (e, defs, evaluate, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
-        var pair = (d.lhs.sym, new ValueTuple(evaluate(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        var pair = (d.lhs.sym, new ValueTuple(evaluate, untilNotVariable,newMap, d.rhs))
         newMap += pair
       })
       newMap
@@ -99,7 +112,7 @@ class Interpreter(reader: java.io.Reader) {
     (e, defs, evaluate, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
-        var pair = (d.lhs.sym, new ValueTuple(evaluate(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        var pair = (d.lhs.sym, new ValueTuple(evaluate, untilNotVariable, newMap, d.rhs))
         newMap += pair
       })
       newMap
@@ -122,7 +135,7 @@ class Interpreter(reader: java.io.Reader) {
     (e, defs, evaluate, untilNotVariable) => {
       var newMap = e
       defs.foreach(d => {
-        var pair = (d.lhs.sym, new ValueTuple(evaluate(d.rhs, newMap), untilNotVariable(d.rhs, newMap)))
+        var pair = (d.lhs.sym, new ValueTuple(evaluate, untilNotVariable, newMap, d.rhs))
         newMap += pair
       })
       newMap
